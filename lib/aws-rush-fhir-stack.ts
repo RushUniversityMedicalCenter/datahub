@@ -173,20 +173,20 @@ export class appStack extends Stack {
     // ECS
     //
 
-    const ecsCluster = new ecs.Cluster(this,'fhir-cluster',{
-      clusterName: props.environment+'-fhir-cluster',
-      vpc: thisvpc,
-    })
-
-    const ecsTaskDef = new ecs.Ec2TaskDefinition(this, 'fhir',{
-      networkMode: ecs.NetworkMode.AWS_VPC,
-    })
-    ecsTaskDef.addContainer('fhir',{
-      cpu: 512,
-      memoryLimitMiB: 1024,
-      image: 'healthplatformregistry.azurecr.io/fhirconverter:v2.0.0'
-
-    })
+    // const ecsCluster = new ecs.Cluster(this,'fhir-cluster',{
+    //   clusterName: props.environment+'-fhir-cluster',
+    //   vpc: thisvpc,
+    // })
+    //
+    // const ecsTaskDef = new ecs.Ec2TaskDefinition(this, 'fhir',{
+    //   networkMode: ecs.NetworkMode.AWS_VPC,
+    // })
+    // ecsTaskDef.addContainer('fhir',{
+    //   cpu: 512,
+    //   memoryLimitMiB: 1024,
+    //   image: 'healthplatformregistry.azurecr.io/fhirconverter:v2.0.0'
+    //
+    // })
 
 
     //
