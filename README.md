@@ -1,8 +1,21 @@
-# Welcome to your CDK TypeScript project!
+# Rush Medical phase 2
 
-This is a blank project for TypeScript development with CDK.
+This repo is to convert existing terraform code to cdk and add enhancements to the application
 
-The `cdk.json` file tells the CDK Toolkit how to execute your app.
+To test in your own account or in the rush poc account. 
+
+* clone this repo
+* Run 
+`npm install`  
+`cdk deploy` 
+
+To make changes and validate the code
+
+`cdk synth`
+
+To verify the changes before deploy and compare with existing deployment
+
+`cdk diff`
 
 ## Useful commands
 
