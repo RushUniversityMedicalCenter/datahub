@@ -7,10 +7,13 @@ export interface infraStackProps extends StackProps {
 }
 
 export class infraStack extends Stack {
+  public readonly vpc: ec2.Vpc;
+  public readonly lambdaSg: ec2.SecurityGroup;
+
   constructor(app: App, id: string, props: infraStackProps) {
     super(app,id,props);
 
-    const vpc = new ec2.Vpc(this, props.environment+'-vpc',{
+    this.vpc = new ec2.Vpc(this, props.environment+'-vpc',{
       cidr: '10.1.0.0/21',
       maxAzs: 2,
       subnetConfiguration: [
@@ -32,36 +35,39 @@ export class infraStack extends Stack {
       ],
     });
 
-    vpc.addGatewayEndpoint('s3vpce', {
+    this.vpc.addGatewayEndpoint('s3vpce', {
       service: GatewayVpcEndpointAwsService.S3
     })
 
-    vpc.addGatewayEndpoint('ddbvpce', {
+    this.vpc.addGatewayEndpoint('ddbvpce', {
       service: GatewayVpcEndpointAwsService.DYNAMODB
     })
 
-    const lambdaSg = new ec2.SecurityGroup(this, 'lambda-sg',{
-      vpc: vpc,
+    this.lambdaSg = new ec2.SecurityGroup(this, 'lambda-sg',{
+      vpc: this.vpc,
       allowAllOutbound: true,
       description: 'Lambda Private Security Group'
     })
 
-    lambdaSg.addIngressRule(ec2.Peer.ipv4(vpc.vpcCidrBlock), ec2.Port.tcp(5432), 'Aurora Internal Ingress');
+    this.lambdaSg.addIngressRule(ec2.Peer.ipv4(this.vpc.vpcCidrBlock), ec2.Port.tcp(5432), 'Aurora Internal Ingress');
 
     new CfnOutput(this, 'vpcIdExport', {
-      value: vpc.vpcId.toString(),
+      value: this.vpc.vpcId.toString(),
       exportName: 'vpcIdExport'
     });
 
     new CfnOutput(this, 'privateSubnetsExport', {
-      value: vpc.selectSubnets({subnetType: SubnetType.PRIVATE}).subnetIds.toString(),
+      value: this.vpc.selectSubnets({subnetType: SubnetType.PRIVATE}).subnetIds.toString(),
       exportName: 'privateSubnetsExport'
     });
 
     new CfnOutput(this, 'lambdaSGExport', {
-      value: lambdaSg.securityGroupId.toString(),
+      value: this.lambdaSg.securityGroupId.toString(),
       exportName: 'lambdaSGExport'
     });
 
+  }
+  public getVpc = () => {
+    return this.vpc
   }
 }
