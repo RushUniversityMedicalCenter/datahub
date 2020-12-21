@@ -41,27 +41,28 @@ export class infraStack extends Stack {
       service: GatewayVpcEndpointAwsService.DYNAMODB
     })
 
-    const ecsSG = new ec2.SecurityGroup(this, 'ecs-sg',{
+    const fhirConvSg = new ec2.SecurityGroup(this, 'fhir-sg',{
       vpc: vpc,
       allowAllOutbound: true,
       description: 'Lambda Private Security Group'
     })
 
-    ecsSG.addIngressRule(ec2.Peer.ipv4(vpc.vpcCidrBlock), ec2.Port.tcp(2019), 'Fhir Convertor ECS sg');
+    fhirConvSg.addIngressRule(ec2.Peer.ipv4(vpc.vpcCidrBlock), ec2.Port.tcp(80), 'Access to Fhir Convertor via ALB');
 
-    new CfnOutput(this, 'vpcIdExport', {
+    new CfnOutput(this, 'vpcId', {
       value: vpc.vpcId.toString(),
       exportName: envName+'-vpcId'
     });
 
-    new CfnOutput(this, 'privateSubnetsExport', {
+
+    new CfnOutput(this, 'privateSubnets', {
       value: vpc.selectSubnets({subnetType: SubnetType.PRIVATE}).subnetIds.toString(),
       exportName: envName+'-privateSubnets'
     });
 
-    new CfnOutput(this, 'ecsSGExport', {
-      value: ecsSG.securityGroupId.toString(),
-      exportName: envName+'-ecsSG'
+    new CfnOutput(this, 'fhirConvSg', {
+      value: fhirConvSg.securityGroupId.toString(),
+      exportName: envName+'-fhirConvSg'
     });
 
     new CfnOutput(this, 'azs',{

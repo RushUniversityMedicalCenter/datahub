@@ -2,17 +2,18 @@ import s3 = require('@aws-cdk/aws-s3');
 import kms = require('@aws-cdk/aws-kms');
 import iam = require('@aws-cdk/aws-iam');
 import {Duration, App, Stack, StackProps, CfnParameter, Fn} from "@aws-cdk/core";
+import {creates3bucket} from "./helpers";
 
 
-export interface appStackProps extends StackProps {
-  readonly environment: string;
+export interface securityStackProps extends StackProps {
+  readonly envName: string;
 }
 
-export class appStack extends Stack {
-  constructor(app: App, id: string, props: appStackProps) {
+export class securityStack extends Stack {
+  constructor(app: App, id: string, props: securityStackProps) {
     super(app, id, props);
 
-
+    const envName = props.envName
 
     //
     // IAM roles
@@ -34,16 +35,9 @@ export class appStack extends Stack {
         new iam.ServicePrincipal("glue.amazonaws.com"),
         new iam.ServicePrincipal("lambda.amazonaws.com")
       ),
-      roleName: "AWSGlueServiceRole"+props.environment
+      roleName: "AWSGlueServiceRole-"+envName
     })
     roleGlueService.addManagedPolicy(iam.ManagedPolicy.fromAwsManagedPolicyName('service-role/AWSGlueServiceRole'))
-
-
-    // ecs role
-    const roleEcsExecution = new iam.Role(this, 'roleEcsExecution',{
-      assumedBy: new iam.ServicePrincipal("ecs-tasks.amazonaws.com")
-    })
-    roleEcsExecution.addManagedPolicy(iam.ManagedPolicy.fromAwsManagedPolicyName('service-role/AmazonECSTaskExecutionRolePolicy'))
 
 
     //
@@ -51,20 +45,20 @@ export class appStack extends Stack {
     //
 
     const kmsLandingKey = new kms.Key(this, 'kmsLandingKey',{
-      alias: props.environment+'-landing-key'
+      alias: envName+'-landing-key'
     })
     kmsLandingKey.grantEncryptDecrypt(roleProcessLambda)
     // kmsLandingKey.grantEncryptDecrypt(roleGlueService)
 
 
     const kmsProcessedKey = new kms.Key(this, 'kmsProcessedKey',{
-      alias: props.environment+'-processed-key'
+      alias: envName+'-processed-key'
     })
     kmsProcessedKey.grantEncryptDecrypt(roleProcessLambda)
     kmsProcessedKey.grantEncryptDecrypt(roleGlueService)
 
     const kmsDatabaseKey = new kms.Key(this, 'kmsDatabaseKey',{
-      alias: props.environment+'-database-key'
+      alias: envName+'-database-key'
     })
     kmsDatabaseKey.grantEncryptDecrypt(roleProcessLambda)
 
@@ -74,7 +68,7 @@ export class appStack extends Stack {
     //
 
     // Landing Buckets - Direct, Api, SFTP
-    const s3LandingDirect = new s3.Bucket(this, props.environment+'landing-direct',{
+    const s3LandingDirect = new s3.Bucket(this, envName+'-landing-direct',{
       encryption: s3.BucketEncryption.KMS,
       encryptionKey: kmsLandingKey,
       blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
@@ -92,7 +86,7 @@ export class appStack extends Stack {
     });
     s3LandingDirect.grantReadWrite(roleProcessLambda)
 
-    const s3LandingApi = new s3.Bucket(this, props.environment+'landing-api',{
+    const s3LandingApi = new s3.Bucket(this, envName+'-landing-api',{
       encryption: s3.BucketEncryption.KMS,
       encryptionKey: kmsLandingKey,
       blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
@@ -110,7 +104,7 @@ export class appStack extends Stack {
     });
     s3LandingApi.grantReadWrite(roleProcessLambda)
 
-    const s3LandingSftp = new s3.Bucket(this, props.environment+'landing-sftp',{
+    const s3LandingSftp = new s3.Bucket(this, envName+'-landing-sftp',{
       encryption: s3.BucketEncryption.KMS,
       encryptionKey: kmsLandingKey,
       blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
@@ -129,7 +123,7 @@ export class appStack extends Stack {
     s3LandingSftp.grantReadWrite(roleProcessLambda)
 
 
-    const s3LandingJuvare = new s3.Bucket(this, props.environment+'landing-juvare',{
+    const s3LandingJuvare = new s3.Bucket(this, envName+'-landing-juvare',{
       encryption: s3.BucketEncryption.KMS,
       encryptionKey: kmsLandingKey,
       blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
@@ -149,51 +143,44 @@ export class appStack extends Stack {
 
     // athena queries
     // processed
-
-
+    // const s3Processed = new s3.Bucket(this, envName+'-processed',{
+    //   encryption: s3.BucketEncryption.KMS,
+    //   encryptionKey: kmsLandingKey,
+    //   blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
+    //   versioned: true,
+    //   lifecycleRules: [
+    //     {
+    //       transitions: [
+    //         {
+    //           storageClass: s3.StorageClass.GLACIER,
+    //           transitionAfter: Duration.days(30)
+    //         }
+    //       ]
+    //     }
+    //   ]
+    // });
+    // s3Processed.grantReadWrite(roleProcessLambda)
+    // s3Processed.grantReadWrite(roleGlueService)
     //
-    // ECS
-    //
+    // const s3AthenaQueries = new s3.Bucket(this, envName+'-athena-queries',{
+    //   encryption: s3.BucketEncryption.S3_MANAGED,
+    //   blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
+    //   versioned: true,
+    //   lifecycleRules: [
+    //     {
+    //       transitions: [
+    //         {
+    //           storageClass: s3.StorageClass.GLACIER,
+    //           transitionAfter: Duration.days(30)
+    //         }
+    //       ]
+    //     }
+    //   ]
+    // });
+    // s3AthenaQueries.grantReadWrite(roleGlueService)
 
-    // const ecsCluster = new ecs.Cluster(this,'fhir-cluster',{
-    //   clusterName: props.environment+'-fhir-cluster',
-    //   vpc: thisvpc,
-    // })
-    //
-    // const ecsTaskDef = new ecs.Ec2TaskDefinition(this, 'fhir',{
-    //   networkMode: ecs.NetworkMode.AWS_VPC,
-    // })
-    // ecsTaskDef.addContainer('fhir',{
-    //   cpu: 512,
-    //   memoryLimitMiB: 1024,
-    //   image: 'healthplatformregistry.azurecr.io/fhirconverter:v2.0.0'
-    //
-    // })
-
-
-    //
-    // Lambda functions
-    //
-
-    // const processCCDA = new lambda.Function(this,'processCCDA',{
-    //   runtime: lambda.Runtime.PYTHON_3_8,
-    //   code: lambda.Code.fromAsset("lambda"),
-    //   handler: 'processCCDA.lambda_handler',
-    //   environment: {
-    //     REGION: this.region,
-    //     DYNAMODB_CONVERSION_TABLE_LOG: "",
-    //     BUCKET_PREPROCESSED_CCDS: "",
-    //     FHIR_CONVERTER_ENDPOINT: "/api/convert/cda/",
-    //     FHIR_CONVERTER_TEMPLATENAME: "ccd.hbs",
-    //     FHIR_CONVERTER_URL: ""
-    //   }
-    // })
-
-
-
-
-
-
+    const testbucket = new creates3bucket(this, envName,'testbucket',kmsLandingKey)
+    console.log(testbucket.bucket.bucketName)
 
   }
 }
