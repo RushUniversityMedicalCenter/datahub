@@ -6,18 +6,18 @@ import {appStack} from "../lib/aws-rush-fhir-stack";
 import {ecsStack} from "../lib/ecsStack";
 
 const app = new App();
-const environment = app.node.tryGetContext('ENVIRONMENT') || process.env.ENVIRONMENT
+const envName = app.node.tryGetContext('envName') || process.env.envName || 'dev'
+const vpcCidr = app.node.tryGetContext('vpcCidr') || process.env.vpcCidr || '10.0.0.0/16'
 
-
-const infra = new infraStack(app, 'infraStack',{
-  environment: environment,
+new infraStack(app, 'infraStack',{
+  envName: envName,
+  vpcCidr: vpcCidr,
 });
 
-new appStack(app, 'appStack',{
-  environment: environment,
-});
-
+// new appStack(app, 'appStack',{
+//   envName: envName,
+// });
+//
 new ecsStack(app, 'ecsStack',{
-  environment: environment,
-  vpc: infra.vpc,
+  envName: envName,
 });

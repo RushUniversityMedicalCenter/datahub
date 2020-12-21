@@ -3,71 +3,71 @@ import {App, CfnOutput, Stack, StackProps} from "@aws-cdk/core";
 import {GatewayVpcEndpointAwsService, SubnetType} from "@aws-cdk/aws-ec2";
 
 export interface infraStackProps extends StackProps {
-  readonly environment: string;
+  readonly envName: string;
+  readonly vpcCidr: string;
 }
 
 export class infraStack extends Stack {
-  public readonly vpc: ec2.Vpc;
-  public readonly lambdaSg: ec2.SecurityGroup;
-
   constructor(app: App, id: string, props: infraStackProps) {
     super(app,id,props);
 
-    this.vpc = new ec2.Vpc(this, props.environment+'-vpc',{
-      cidr: '10.1.0.0/21',
+    const envName = props.envName;
+    const vpcCidr = props.vpcCidr;
+
+    const vpc = new ec2.Vpc(this, envName+'-vpc',{
+      cidr: vpcCidr,
       maxAzs: 2,
+      enableDnsHostnames: true,
+      enableDnsSupport: true,
       subnetConfiguration: [
         {
           subnetType: ec2.SubnetType.PUBLIC,
-          name: 'pub-app-',
+          name: 'public-',
           cidrMask: 24,
         },
         {
           subnetType: ec2.SubnetType.PRIVATE,
-          name: 'priv-app-',
-          cidrMask: 24,
-        },
-        {
-          subnetType: ec2.SubnetType.ISOLATED,
-          name: 'priv-db-',
+          name: 'private-',
           cidrMask: 24,
         },
       ],
     });
 
-    this.vpc.addGatewayEndpoint('s3vpce', {
+    vpc.addGatewayEndpoint('s3vpce', {
       service: GatewayVpcEndpointAwsService.S3
     })
 
-    this.vpc.addGatewayEndpoint('ddbvpce', {
+    vpc.addGatewayEndpoint('ddbvpce', {
       service: GatewayVpcEndpointAwsService.DYNAMODB
     })
 
-    this.lambdaSg = new ec2.SecurityGroup(this, 'lambda-sg',{
-      vpc: this.vpc,
+    const ecsSG = new ec2.SecurityGroup(this, 'ecs-sg',{
+      vpc: vpc,
       allowAllOutbound: true,
       description: 'Lambda Private Security Group'
     })
 
-    this.lambdaSg.addIngressRule(ec2.Peer.ipv4(this.vpc.vpcCidrBlock), ec2.Port.tcp(5432), 'Aurora Internal Ingress');
+    ecsSG.addIngressRule(ec2.Peer.ipv4(vpc.vpcCidrBlock), ec2.Port.tcp(2019), 'Fhir Convertor ECS sg');
 
     new CfnOutput(this, 'vpcIdExport', {
-      value: this.vpc.vpcId.toString(),
-      exportName: 'vpcIdExport'
+      value: vpc.vpcId.toString(),
+      exportName: envName+'-vpcId'
     });
 
     new CfnOutput(this, 'privateSubnetsExport', {
-      value: this.vpc.selectSubnets({subnetType: SubnetType.PRIVATE}).subnetIds.toString(),
-      exportName: 'privateSubnetsExport'
+      value: vpc.selectSubnets({subnetType: SubnetType.PRIVATE}).subnetIds.toString(),
+      exportName: envName+'-privateSubnets'
     });
 
-    new CfnOutput(this, 'lambdaSGExport', {
-      value: this.lambdaSg.securityGroupId.toString(),
-      exportName: 'lambdaSGExport'
+    new CfnOutput(this, 'ecsSGExport', {
+      value: ecsSG.securityGroupId.toString(),
+      exportName: envName+'-ecsSG'
     });
 
-  }
-  public getVpc = () => {
-    return this.vpc
+    new CfnOutput(this, 'azs',{
+      value: vpc.availabilityZones.toString(),
+      exportName: envName+'-azs'
+    })
+
   }
 }
