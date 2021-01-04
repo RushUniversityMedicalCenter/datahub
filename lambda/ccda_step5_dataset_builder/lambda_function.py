@@ -18,9 +18,11 @@ import os
 import boto3
 import logging
 from botocore.exceptions import ClientError
-from ccd_load_delta import build_datasets
 import awswrangler as wr
-import datetime
+from datetime import datetime
+
+from utils.ccd_load_delta import build_datasets
+from utils.exceptions import FhirDatasetsGenerationError
 
 LOGGER = logging.getLogger()
 LOGGER.setLevel(logging.INFO)
@@ -32,25 +34,27 @@ FOLDER_PROCESSED_FHIRS_DATASETS = os.environ['FOLDER_PROCESSED_FHIRS_DATASETS']
 S3_CLIENT = boto3.client('s3')
 
 
-def generate_datasets(fhir_content, filename, message_id):
+def generate_datasets(fhir_content, filename, message_id, event):
 
     year = str(datetime.today().year)
     month = str(datetime.today().month)
     day = str(datetime.today().day)
     is_datasets_created = False
+    try:
+        if 'fhirResource' in fhir_content:
+            datasets = build_datasets(
+                fhir_content['fhirResource'], filename)
 
-    if 'fhirResource' in fhir_content:
-        datasets = build_datasets(
-            fhir_content['fhirResource'], filename)
-
-        if(datasets):
-            for k, v in datasets.items():
-                if v.shape[0] > 0:
-                    _file = f's3://{BUCKET_PROCESSED_FHIR_DATASETS}/{FOLDER_PROCESSED_FHIRS_DATASETS}/{k}/year={year}/month={month}/day={day}/{message_id}.parquet'
-                    wr.s3.to_parquet(v, _file)
-                    # res = add_new_partition(
-                    #     'AwsDataCatalog', 'fhir', k, year, month, day)
-            is_datasets_created = True
+            if(datasets):
+                for k, v in datasets.items():
+                    if v.shape[0] > 0:
+                        _file = f's3://{BUCKET_PROCESSED_FHIR_DATASETS}/{FOLDER_PROCESSED_FHIRS_DATASETS}/resource_type={k}/year={year}/month={month}/day={day}/message_id={message_id}/{filename}.parquet'
+                        wr.s3.to_parquet(v, _file)
+                        # res = add_new_partition(
+                        #     'AwsDataCatalog', 'fhir', k, year, month, day)
+                is_datasets_created = True
+    except (Exception, AttributeError) as err:
+        raise FhirDatasetsGenerationError(event, str(err))
 
     return is_datasets_created
 
@@ -63,18 +67,23 @@ def lambda_handler(event, context):
 
     if event['Status'] == 'CONVERTED':
 
+        sqs_message_id = event['Source']['sqs_message_id']
+
         fhir_bucket = event['Fhir']['bucket']
         fhir_filename = event['Fhir']['key']
 
         fhir_file = S3_CLIENT.get_object(Bucket=fhir_bucket, Key=fhir_filename)
         fhir_content = json.loads(fhir_file['Body'].read())
 
-        if generate_datasets(fhir_content, fhir_filename):
+        f_name = os.path.basename(fhir_filename).replace(".json", "")
+
+        if generate_datasets(fhir_content, f_name, sqs_message_id, event):
             # process the dataset builder over the fhir bundle
             event['Status'] = 'DATASETS_GENERATED'
         else:
             event['Status'] = 'FAILED'
-            raise Exception('Failed to generate dataset from FHIR')
+            raise FhirDatasetsGenerationError(event,
+                                              'Failed to generate dataset from FHIR')
     else:
         raise Exception("Can't generate datasets from not Converted CCDs")
 

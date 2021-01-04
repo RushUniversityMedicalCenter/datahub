@@ -12,7 +12,9 @@ Copyright 2020 - 2020 Amazon Web Services, Amazon
 '''
 
 import json
+import boto3
 
+S3_CLIENT = boto3.client('s3')
 
 def lambda_handler(event, context):
     # TODO implement
@@ -22,6 +24,9 @@ def lambda_handler(event, context):
         # confirm that the CCD file is stored in a versioned bucket
         # confirm that the FHIR BUNDLE BATCH file is stored in a versioned bucket
         # confirm that the FHIR BUNDLE RESOURCES files are stored in a versioned bucket
+        bucket_landing = event[0]['Object']['bucket']
+        key = event[0]['Object']['key']
+        S3_CLIENT.delete_object(Bucket=bucket_landing, Key=f"{key}")
         event[0]['Status'] = 'COMPLETED'
     else:
         event[0]['Status'] = 'FAILED'

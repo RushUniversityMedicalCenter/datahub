@@ -11,7 +11,7 @@ If a file is zip, gzip or tar, we send the file to DecompressionStep,
 and from the DecompressionStep each file is sent to ValidateFile Step.
 Otherwise we send it straight to ValidataFile Step
 -----
-Last Modified: Tuesday, 22nd December 2020 8:38:57 am
+Last Modified: Tuesday, 29nd December 2020 12:08:57 pm
 Modified By: Canivel, Danilo (dccanive@amazon.com>)
 -----
 Copyright 2020 - 2020 Amazon Web Services, Amazon
@@ -45,8 +45,12 @@ def check_suffix(filepath):
 def lambda_handler(event, context):
     LOGGER.info(event)
 
-    sqs_message_id = event['Source']['sqs_message_id']
-    aws_request_id = event['Source']['aws_request_id']
+    year = str(datetime.today().year)
+    month = str(datetime.today().month)
+    day = str(datetime.today().day)
+
+    # sqs_message_id = event['Source']['sqs_message_id']
+    aws_request_id = event['aws_request_id']
 
     input_next_step = {
         'Records': []
@@ -54,9 +58,12 @@ def lambda_handler(event, context):
 
     if 'Records' in event:
         for record in event['Records']:
-            if record['eventSource'] == 'aws:s3':
-                filename = record['s3']['object']['key']
-                bucket_landing = record['s3']['bucket']['name']
+            if record['Record']['eventSource'] == 'aws:s3':
+
+                sqs_message_id = record['Source']['sqs_message_id']
+
+                filename = record['Record']['s3']['object']['key']
+                bucket_landing = record['Record']['s3']['bucket']['name']
 
                 filename = unquote_plus(filename)
                 f_name = os.path.basename(filename)
@@ -68,7 +75,7 @@ def lambda_handler(event, context):
                     copy_response = S3_CLIENT.copy_object(
                         Bucket=f'{BUCKET_PROCESSED_CCDS}',
                         CopySource=f'/{bucket_landing}/{filename}',
-                        Key=f'{FOLDER_PROCESSED_CCDS}/{sqs_message_id}/{f_name}',
+                        Key=f'{FOLDER_PROCESSED_CCDS}/year={year}/month={month}/day={day}/message_id={sqs_message_id}/{f_name}',
                     )
 
                     file_record = {

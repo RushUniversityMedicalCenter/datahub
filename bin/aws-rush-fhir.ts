@@ -4,7 +4,7 @@ import {infraStack} from '../lib/infra-stack';
 import {App} from "@aws-cdk/core";
 import {dataStack} from "../lib/data-stack";
 import {fhirConvStack} from "../lib/fhir-conv-stack";
-import {appStack} from "../lib/app-stack";
+// import {appStack} from "../lib/app-stack";
 
 
 const app = new App();
@@ -26,9 +26,9 @@ const FhirConv =  new fhirConvStack(app, envName+'FhirConv',{
 FhirConv.addDependency(InfraStack,'DeployAfterInfra');
 
 
-const AppStack = new appStack(app, envName+'AppStack',{
-  envName: envName,
-});
+// const AppStack = new appStack(app, envName+'AppStack',{
+//   envName: envName,
+// });
 // AppStack.addDependency(InfraStack,'DeployAfterInfra')
 // AppStack.addDependency(DataStack,'DeployAfterDataStack')
 // AppStack.addDependency(FhirConv,'DeployAfterFhirConv')

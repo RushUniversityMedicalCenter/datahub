@@ -23,9 +23,10 @@ from botocore.exceptions import ClientError
 
 LOGGER = logging.getLogger()
 LOGGER.setLevel(logging.INFO)
-DYNAMODB_CLIENT = boto3.client('dynamodb')
 CCDS_SQSMESSAGE_TABLE_LOG = os.environ['CCDS_SQSMESSAGE_TABLE_LOG']
 SFN_ARN = os.environ['SFN_ARN']
+
+DYNAMODB_CLIENT = boto3.client('dynamodb')
 STEPFUNCTIONS_CLIENT = boto3.client('stepfunctions')
 
 
@@ -56,7 +57,7 @@ def is_message_processed(aws_requestID, messageId) -> bool:
 
         if Key.ITEM.value in response:
             LOGGER.info(
-                f'Item with ID {messageId} read from DynamoDB table ')
+                f'Item with ID {messageId} FOUND on DynamoDB table ')
             return True
         else:
             now = datetime.now()
@@ -79,6 +80,11 @@ def lambda_handler(event, context):
     AWS_REQUEST_ID = context.aws_request_id
     LOGGER.info(f'Start processing message {AWS_REQUEST_ID}')
 
+    input_sfn = {
+        'aws_request_id': AWS_REQUEST_ID,
+        'Records': []
+    }
+
     for main_record in event['Records']:
 
         # CHECK IF MESSAGE IS ALREADY PROCESSED OR IN PROCESS
@@ -86,24 +92,29 @@ def lambda_handler(event, context):
 
         if is_message_processed(AWS_REQUEST_ID, MESSAGE_ID):
             # Go to next if Item is present, message is already been processed
+            LOGGER.error(
+                f'## SQS Messsage id: {str(MESSAGE_ID)} was already processed, going to next message.')
+
             raise Exception('Message is already Processed or been Processed')
 
         body = json.loads(main_record['body'])
         LOGGER.info(body)
         if 'Records' in body:
-            input_sfn = {
+            source = {
                 'Source': {
-                    'sqs_message_id': MESSAGE_ID,
-                    'aws_request_id': AWS_REQUEST_ID,
+                    'sqs_message_id': MESSAGE_ID
                 },
-                'Records': body['Records']
+                'Record': body['Records'][0]
             }
 
-            LOGGER.info(input_sfn)
-            input_sfn['Records'] = body['Records']
-            response = STEPFUNCTIONS_CLIENT.start_execution(
-                stateMachineArn=SFN_ARN,
-                input=json.dumps(input_sfn)
-            )
+            input_sfn['Records'].append(source)
         else:
             continue
+
+    LOGGER.info(input_sfn)
+    response = STEPFUNCTIONS_CLIENT.start_execution(
+        stateMachineArn=SFN_ARN,
+        input=json.dumps(input_sfn)
+    )
+
+    return response
