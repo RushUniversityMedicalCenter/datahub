@@ -13,6 +13,7 @@ import {App, CfnOutput, Duration, Fn, Stack, StackProps} from "@aws-cdk/core";
 import {createLambda, creates3bucket} from "./helpers";
 import {SubnetType} from "@aws-cdk/aws-ec2";
 import {InvokeFunction} from "@aws-cdk/aws-stepfunctions-tasks";
+import {ifError} from "assert";
 
 
 export interface dataStackProps extends StackProps {
@@ -273,10 +274,52 @@ export class dataStack extends Stack {
 
     // step function
 
+    // // Tasks
+    //
+    // const ExceptionHandler = new tasks.LambdaInvoke(this, 'ExceptionHandler',{
+    //   lambdaFunction: ccda_exception_handler.lambdaFunction
+    // })
+    // const NotifyFailure = new tasks.SnsPublish(this, 'NotifyFailure',{
+    //     topic: snsCCDConversionStatusTopic,
+    //     message: sfn.TaskInput.fromJsonPathAt('$')
+    //   })
+    // const Fail = new sfn.Fail(this,'Fail')
+    //
+    // const ValidateFile = new tasks.LambdaInvoke(this, 'ValidateFile',{
+    //   lambdaFunction: ccda_step2_validation.lambdaFunction
+    // })
+    //
+    // const Deduplication = new tasks.LambdaInvoke(this, 'Deduplication',{
+    //   lambdaFunction: ccda_step3_deduplication.lambdaFunction
+    // })
+    //
+    // const ConvertToFHIR = new tasks.LambdaInvoke(this, 'ConvertToFHIR',{
+    //   lambdaFunction: ccda_step4_converter.lambdaFunction
+    // })
+    //
+    // const BuildFHIRDatasets = new tasks.LambdaInvoke(this, 'BuildFHIRDatasets',{
+    //   lambdaFunction: ccda_step5_dataset_builder.lambdaFunction
+    // })
+    //
+    // const SaveFHIRResources = new tasks.LambdaInvoke(this, 'SaveFHIRResources',{
+    //   lambdaFunction: ccda_step6_fhir_resource_split.lambdaFunction
+    // })
+    //
+    // const WaitTryAgain = new sfn.Wait(this, 'WaitTryAgain',{
+    //   time: sfn.WaitTime.duration(Duration.seconds(10))
+    //   })
+    //
+    // const ProcessSQSMessage = new tasks.LambdaInvoke(this, 'ProcessSQSMessage', {
+    //   lambdaFunction: ccda_step1_new_files.lambdaFunction,
+    //   outputPath: '$.Payload',
+    // })
+
+
+
     const exceptionHandler = sfn.Chain
       .start(new tasks.LambdaInvoke(this, 'ExceptionHandler',{
-      lambdaFunction: ccda_exception_handler.lambdaFunction
-    }))
+        lambdaFunction: ccda_exception_handler.lambdaFunction
+      }))
       .next(new tasks.SnsPublish(this, 'NotifyFailure',{
         topic: snsCCDConversionStatusTopic,
         message: sfn.TaskInput.fromJsonPathAt('$')
@@ -298,7 +341,21 @@ export class dataStack extends Stack {
       }).addCatch(exceptionHandler))
       .next(new tasks.LambdaInvoke(this, 'SaveFHIRResources',{
         lambdaFunction: ccda_step6_fhir_resource_split.lambdaFunction
-      }).addCatch(exceptionHandler))
+      })
+        .addRetry({
+          maxAttempts:5,
+          errors: ['HealthLakePostTooManyRequestsError']
+        })
+        .addCatch(new sfn.Wait(this, 'WaitTryAgain',{
+          time: sfn.WaitTime.duration(Duration.seconds(10))
+        }), {
+          resultPath: '$.error',
+          errors: ['HealthLakePostTooManyRequestsError']
+          }
+        )
+        .addCatch(exceptionHandler)
+      )
+      .next(new sfn.Pass(this,'Complete'))
 
     const validateMap = new sfn.Map(this,'ValidateAll',{
       itemsPath: '$.Records',
@@ -320,6 +377,7 @@ export class dataStack extends Stack {
     const stateMachine = new sfn.StateMachine(this, envName+'CCDAtoFHIRStateMachine',{
       definition,
     })
+    snsCCDConversionStatusTopic.grantPublish(stateMachine.role)
 
 
 
