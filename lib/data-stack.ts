@@ -1,5 +1,5 @@
 import s3 = require('@aws-cdk/aws-s3');
-import s3n = require('@aws-cdk/aws-s3-notifications')
+import s3n = require('@aws-cdk/aws-s3-notifications');
 import kms = require('@aws-cdk/aws-kms');
 import iam = require('@aws-cdk/aws-iam');
 import ec2 = require('@aws-cdk/aws-ec2');
@@ -8,13 +8,13 @@ import sqs = require('@aws-cdk/aws-sqs');
 import sns = require('@aws-cdk/aws-sns');
 import lambda = require('@aws-cdk/aws-lambda');
 import sfn = require('@aws-cdk/aws-stepfunctions');
-import tasks = require('@aws-cdk/aws-stepfunctions-tasks')
+import tasks = require('@aws-cdk/aws-stepfunctions-tasks');
+import api = require('@aws-cdk/aws-apigatewayv2');
+import {SqsEventSource} from '@aws-cdk/aws-lambda-event-sources';
+import {LambdaProxyIntegration} from '@aws-cdk/aws-apigatewayv2-integrations';
 import {App, CfnOutput, Duration, Fn, Stack, StackProps} from "@aws-cdk/core";
-import {createLambda, creates3bucket} from "./helpers";
-import {SubnetType} from "@aws-cdk/aws-ec2";
-import {InvokeFunction} from "@aws-cdk/aws-stepfunctions-tasks";
-import {ifError} from "assert";
-
+import {createLambda, createLambdaWithLayer, creates3bucket} from "./helpers";
+import {HttpMethod} from "@aws-cdk/aws-apigatewayv2";
 
 export interface dataStackProps extends StackProps {
   readonly envName: string;
@@ -28,6 +28,7 @@ export class dataStack extends Stack {
     // VPC imports
     const privateSubnetIds = Fn.split(",", Fn.importValue(envName+"-privateSubnets"));
     const fhirConvSgId = Fn.importValue(envName+"-fhirConvSg");
+    const fhirConvUrl = Fn.importValue(envName+'-fhir-convertor-url')
 
     const vpc = ec2.Vpc.fromVpcAttributes(this, "importedVpc", {
       vpcId: Fn.importValue(envName+"-vpcId"),
@@ -42,11 +43,12 @@ export class dataStack extends Stack {
     // IAM role for processCCDA, .. add more tbd
 
     const roleLambdaProcessCCD = new iam.Role(this, 'roleLambdaProcessCCD',{
-      assumedBy: new iam.ServicePrincipal("lambda.amazonaws.com")
+      assumedBy: new iam.ServicePrincipal("lambda.amazonaws.com"),
+      roleName: envName+'LambdaProcessCCD'
     });
     roleLambdaProcessCCD.addManagedPolicy(iam.ManagedPolicy.fromAwsManagedPolicyName('service-role/AWSLambdaVPCAccessExecutionRole'))
     roleLambdaProcessCCD.addManagedPolicy(iam.ManagedPolicy.fromAwsManagedPolicyName('service-role/AWSLambdaRole'))
-    // roleLambdaProcessCCD.addManagedPolicy(iam.ManagedPolicy.fromAwsManagedPolicyName('AmazonDynamoDBFullAccess'))
+    roleLambdaProcessCCD.addManagedPolicy(iam.ManagedPolicy.fromAwsManagedPolicyName('AWSStepFunctionsFullAccess'))
     // add dynamodb access
     // add s3 access
 
@@ -56,6 +58,7 @@ export class dataStack extends Stack {
         new iam.ServicePrincipal("glue.amazonaws.com"),
         new iam.ServicePrincipal("lambda.amazonaws.com")
       ),
+      // Glue role name must follow the below syntax. AWSGlueServiceRole Prefix is required for Glue to work properly.
       roleName: "AWSGlueServiceRole-"+envName
     })
     roleGlueService.addManagedPolicy(iam.ManagedPolicy.fromAwsManagedPolicyName('service-role/AWSGlueServiceRole'))
@@ -123,11 +126,11 @@ export class dataStack extends Stack {
 
     // dynamodb
     const ccds_hash_table_log = new dynamodb.Table(this, 'ccds_hash_table_log', {
-      tableName: envName+'-ccds_hash_table_log',
+      tableName: envName+'-ccd_hash_table_log',
       billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
       encryption: dynamodb.TableEncryption.CUSTOMER_MANAGED,
       encryptionKey: kmsDatabaseKey,
-      partitionKey: {name: 'id', type: dynamodb.AttributeType.STRING},
+      partitionKey: {name: 'ccd_hash', type: dynamodb.AttributeType.STRING},
     })
     ccds_hash_table_log.grantFullAccess(roleLambdaProcessCCD)
 
@@ -140,14 +143,14 @@ export class dataStack extends Stack {
     })
     ccds_sqs_messages_log.grantFullAccess(roleLambdaProcessCCD)
 
-    const ccd_fhir_conversion_log = new dynamodb.Table(this, 'ddb', {
-      tableName: envName+'-ccd_fhir_conversion_log',
-      billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
-      encryption: dynamodb.TableEncryption.CUSTOMER_MANAGED,
-      encryptionKey: kmsDatabaseKey,
-      partitionKey: {name: 'id', type: dynamodb.AttributeType.STRING},
-    })
-    ccd_fhir_conversion_log.grantFullAccess(roleLambdaProcessCCD)
+    // const ccd_fhir_conversion_log = new dynamodb.Table(this, 'ddb', {
+    //   tableName: envName+'-ccd_fhir_conversion_log',
+    //   billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
+    //   encryption: dynamodb.TableEncryption.CUSTOMER_MANAGED,
+    //   encryptionKey: kmsDatabaseKey,
+    //   partitionKey: {name: 'id', type: dynamodb.AttributeType.STRING},
+    // })
+    // ccd_fhir_conversion_log.grantFullAccess(roleLambdaProcessCCD)
 
     const ccds_sfn_exceptions_log = new dynamodb.Table(this, 'ccds_sfn_exceptions_log', {
       tableName: envName+'-ccds_sfn_exceptions_log',
@@ -196,11 +199,20 @@ export class dataStack extends Stack {
     //
     //
 
-    const ccda_step0_start_state_machine = new createLambda(this, envName, roleLambdaProcessCCD, 'ccda_step0_start_state_machine',
-      {
-        CCDS_SQSMESSAGE_TABLE_LOG: ccds_sqs_messages_log.tableName,
-        SFN_ARN: ccdQueue.queueArn,
-      });
+    // Lambda Layers
+
+    const layerWrangler = new lambda.LayerVersion(this, 'pandas-awswrangler-requests', {
+      code: lambda.Code.fromAsset('lambda_layer/pandas-awswrangler-requests.zip'),
+      compatibleRuntimes: [lambda.Runtime.PYTHON_3_8],
+      layerVersionName: envName+'-pandas-awswrangler-requests'
+    })
+
+    const layerXlrd = new lambda.LayerVersion(this, 'xlrd', {
+      code: lambda.Code.fromAsset('lambda_layer/xlrd.zip'),
+      compatibleRuntimes: [lambda.Runtime.PYTHON_3_8],
+      layerVersionName: envName+'-xlrd'
+    })
+
 
     const ccda_step1_new_files = new createLambda(this, envName, roleLambdaProcessCCD, 'ccda_step1_new_files',
       {
@@ -209,58 +221,63 @@ export class dataStack extends Stack {
         FOLDER_PROCESSED_CCDS: 'converted',
       });
 
-    const ccda_step1a_batch_processing = new createLambda(this, envName, roleLambdaProcessCCD, 'ccda_step1a_batch_processing',
-      {}
-      );
-
     const ccda_step2_validation = new createLambda(this, envName, roleLambdaProcessCCD, 'ccda_step2_validation',
-      {}
+      {
+        CCDS_SQSMESSAGE_TABLE_LOG: ccds_sqs_messages_log.tableName,
+      }
       );
 
     const ccda_step3_deduplication = new createLambda(this, envName, roleLambdaProcessCCD, 'ccda_step3_deduplication',
       {
         CCDS_HASH_TABLE_LOG: ccds_hash_table_log.tableName,
+        CCDS_SQSMESSAGE_TABLE_LOG: ccds_sqs_messages_log.tableName,
       });
 
     const ccda_step4_converter = new lambda.Function(this, 'ccda_step4_converter', {
       functionName: envName + '-' + 'ccda_step4_converter',
       runtime: lambda.Runtime.PYTHON_3_8,
-      handler: 'ccda_step4_converter/lambda_function.lambda_handler',
-      code: lambda.Code.fromAsset('lambda/'),
+      timeout: Duration.seconds(900),
+      handler: 'lambda_function.lambda_handler',
+      code: lambda.Code.fromAsset('lambda/ccda_step4_converter'),
+      layers: [layerWrangler],
       role: roleLambdaProcessCCD,
       environment: {
         BUCKET_PROCESSED_CCDS: s3Processed.bucket.bucketName,
         CCDS_SQSMESSAGE_TABLE_LOG: ccds_sqs_messages_log.tableName,
-        FHIR_CONVERTER_ENDPOINT: '/api/convert/cda/',
-        FHIR_CONVERTER_TEMPLATENAME: 'ccd.hbs',
-        FHIR_CONVERTER_URL: 'http://34.205.75.147',
+        CCD_FHIR_CONVERTER_ENDPOINT: '/api/convert/cda/',
+        CCD_FHIR_CONVERTER_TEMPLATENAME: 'ccd.hbs',
+        HL7_FHIR_CONVERTER_ENDPOINT: '/api/convert/hl7v2/',
+        HL7_FHIR_CONVERTER_TEMPLATENAME: 'ADT_A01.hbs',
+        FHIR_CONVERTER_URL: fhirConvUrl.toString(),
         FOLDER_PROCESSED_CCDS: 'converted',
         },
       vpc: vpc,
-      vpcSubnets: {subnetType: SubnetType.PRIVATE},
+      vpcSubnets: {subnetType: ec2.SubnetType.PRIVATE},
       securityGroups: [ec2.SecurityGroup.fromSecurityGroupId(this,'fhir-sg',fhirConvSgId)],
       }
-
-
     );
-    // todo parameterize fhir convertor url
 
-    const ccda_step5_dataset_builder = new createLambda(this, envName, roleLambdaProcessCCD, 'ccda_step5_dataset_builder',
+
+    const ccda_step5_dataset_builder = new createLambdaWithLayer(this, envName, roleLambdaProcessCCD, 'ccda_step5_dataset_builder',layerWrangler,
       {
         BUCKET_PROCESSED_FHIR_DATASETS: s3Processed.bucket.bucketName,
         CCDS_SQSMESSAGE_TABLE_LOG: ccds_sqs_messages_log.tableName,
         FOLDER_PROCESSED_FHIRS_DATASETS: 'fhir_datasets'
       });
 
-    const ccda_step6_fhir_resource_split = new createLambda(this, envName, roleLambdaProcessCCD, 'ccda_step6_fhir_resource_split',
+    const ccda_step6_fhir_resource_split = new createLambdaWithLayer(this, envName, roleLambdaProcessCCD, 'ccda_step6_fhir_resource_split',layerWrangler,
       {
         BUCKET_PROCESSED_FHIR_RESOURCES: s3Processed.bucket.bucketName,
         CCDS_SQSMESSAGE_TABLE_LOG: ccds_sqs_messages_log.tableName,
         FOLDER_PROCESSED_FHIR_RESOURCES: 'fhir_resources',
         HEALTHLAKE_ENDPOINT:'https://healthlake.us-east-1.amazonaws.com/datastore/c93bb7da51d252aac7f77e831d5ca29f/r4/',
+        HEALTHLAKE_CANONICAL_URI: '/datastore/c93bb7da51d252aac7f77e831d5ca29f/r4/',
+        ACCESS_KEY: 'AKIA6AFCJYENA65NRF23',
+        SECRET_ACCESS: '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'
       });
 
     // todo parameterize healthlake endpoint.
+    // todo parameterize accesskey secretkey via secrets if role does not work
 
     const ccda_exception_handler = new createLambda(this, envName, roleLambdaProcessCCD, 'ccda_exception_handler',
       {
@@ -272,12 +289,14 @@ export class dataStack extends Stack {
       {}
     );
 
-    // step function
+
+    // Step function - State machine
 
     // // Tasks
 
     const ExceptionHandler = new tasks.LambdaInvoke(this, 'ExceptionHandler',{
-      lambdaFunction: ccda_exception_handler.lambdaFunction
+      lambdaFunction: ccda_exception_handler.lambdaFunction,
+      outputPath: '$.Payload',
     })
     const NotifyFailure = new tasks.SnsPublish(this, 'NotifyFailure',{
         topic: snsCCDConversionStatusTopic,
@@ -291,47 +310,54 @@ export class dataStack extends Stack {
       .next(Fail)
 
     const ValidateFile = new tasks.LambdaInvoke(this, 'ValidateFile',{
-      lambdaFunction: ccda_step2_validation.lambdaFunction
+      lambdaFunction: ccda_step2_validation.lambdaFunction,
+      outputPath: '$.Payload',
     }).addCatch(exceptionHandler)
 
     const Deduplication = new tasks.LambdaInvoke(this, 'Deduplication',{
-      lambdaFunction: ccda_step3_deduplication.lambdaFunction
+      lambdaFunction: ccda_step3_deduplication.lambdaFunction,
+      outputPath: '$.Payload',
     }).addCatch(exceptionHandler)
 
     const ConvertToFHIR = new tasks.LambdaInvoke(this, 'ConvertToFHIR',{
-      lambdaFunction: ccda_step4_converter
+      lambdaFunction: ccda_step4_converter,
+      outputPath: '$.Payload',
     }).addCatch(exceptionHandler)
 
     const BuildFHIRDatasets = new tasks.LambdaInvoke(this, 'BuildFHIRDatasets',{
-      lambdaFunction: ccda_step5_dataset_builder.lambdaFunction
+      lambdaFunction: ccda_step5_dataset_builder.lambdaFunction,
+      outputPath: '$.Payload',
     }).addCatch(exceptionHandler)
 
     const WaitTryAgain = new sfn.Wait(this, 'WaitTryAgain',{
       time: sfn.WaitTime.duration(Duration.seconds(10))
     })
+
+    const Complete = new sfn.Pass(this,'Complete')
+
     const SaveFHIRResources = new tasks.LambdaInvoke(this, 'SaveFHIRResources',{
-      lambdaFunction: ccda_step6_fhir_resource_split.lambdaFunction
+      lambdaFunction: ccda_step6_fhir_resource_split.lambdaFunction,
+      outputPath: '$.Payload',
     })
+      .addRetry({
+        maxAttempts: 5,
+        interval: Duration.seconds(1),
+        errors: ['HealthLakePostTooManyRequestsError']
+      })
       .addCatch(WaitTryAgain,{
         resultPath: '$.error',
         errors:['HealthLakePostTooManyRequestsError']
       })
-      .addRetry({
-        maxAttempts: 5,
-        errors: ['HealthLakePostTooManyRequestsError']
-      })
-      .addCatch(exceptionHandler)
-
-
+      .addCatch(exceptionHandler,{errors: ['States.All']})
 
     const ProcessSQSMessage = new tasks.LambdaInvoke(this, 'ProcessSQSMessage', {
       lambdaFunction: ccda_step1_new_files.lambdaFunction,
       outputPath: '$.Payload',
     })
 
-
-
-
+    const FinalizeProcess = new tasks.LambdaInvoke(this, 'FinalizeProcess',{
+      lambdaFunction: ccda_finish_stepfunction.lambdaFunction,
+    })
 
     const validateMapChain = sfn.Chain
       .start(ValidateFile)
@@ -339,7 +365,11 @@ export class dataStack extends Stack {
       .next(ConvertToFHIR)
       .next(BuildFHIRDatasets)
       .next(SaveFHIRResources)
-      .next(new sfn.Pass(this,'Complete'))
+      .next(WaitTryAgain)
+      .next(new sfn.Choice(this, 'FHIRComplete?')
+        .when(sfn.Condition.stringEquals('$.Status', 'COMPLETED'), Complete)
+        .when(sfn.Condition.stringEquals('$.Error', 'HealthLakePostTooManyRequestsError'), SaveFHIRResources))
+
 
     const validateMap = new sfn.Map(this,'ValidateAll',{
       itemsPath: '$.Records',
@@ -351,16 +381,57 @@ export class dataStack extends Stack {
     const definition = sfn.Chain
       .start(ProcessSQSMessage)
       .next(validateMap)
-      .next(new tasks.LambdaInvoke(this, 'FinalizeProcess',{
-        lambdaFunction: ccda_finish_stepfunction.lambdaFunction,
-      }))
+      .next(FinalizeProcess)
 
     const stateMachine = new sfn.StateMachine(this, envName+'CCDAtoFHIRStateMachine',{
       definition,
     })
     snsCCDConversionStatusTopic.grantPublish(stateMachine.role)
 
+    // Trigger Step function
+    const ccda_step0_start_state_machine = new createLambda(this, envName, roleLambdaProcessCCD, 'ccda_step0_start_state_machine',
+      {
+        CCDS_SQSMESSAGE_TABLE_LOG: ccds_sqs_messages_log.tableName,
+        SFN_ARN: stateMachine.stateMachineArn,
+      });
+    // Lambda Triggers
+    ccda_step0_start_state_machine.lambdaFunction.addEventSource(new SqsEventSource(ccdQueue,{
+      batchSize: 1,
+      enabled: true
+    }));
 
+
+
+
+    //
+    // API Gateway for dropping files to landingApi bucket
+    //
+
+    const lambdaUploadCCDApi = new createLambda(this, envName,roleLambdaProcessCCD,'uploadCCDApi',
+      {
+        BUCKET_LANDING_API: s3LandingApi.bucket.bucketName
+      })
+
+    const apiUploadCCD = new api.HttpApi(this,'apiUploadCCD',
+      {
+        apiName: envName+'-UploadCCD',
+        corsPreflight: {
+          allowHeaders: ['*'],
+          allowMethods: [HttpMethod.POST],
+          allowOrigins: ['*'],
+        }
+      });
+    apiUploadCCD.addRoutes({
+      path: '/uploadccd',
+      methods: [api.HttpMethod.POST],
+      integration: new LambdaProxyIntegration({
+        handler: lambdaUploadCCDApi.lambdaFunction
+      })
+    })
+
+    //
+    // SFTP Endpoint
+    //
 
 
     //

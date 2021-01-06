@@ -6,11 +6,12 @@ Author: Canivel, Danilo (dccanive@amazon.com)
 Description: Persist the FHIR Batch into HealthLake, changing the type to transaction
 and POST it to Health Lake
 -----
-Last Modified: Saturday, 2nd January 2021 8:32:08 am
+Last Modified: Wednesday, 6th January 2021 12:42:21 pm
 Modified By: Canivel, Danilo (dccanive@amazon.com>)
 -----
 Copyright 2020 - 2020 Amazon Web Services, Amazon
 """
+
 
 import sys
 import os
@@ -37,7 +38,7 @@ HEALTHLAKE_CANONICAL_URI = os.environ["HEALTHLAKE_CANONICAL_URI"]
 
 
 S3_CLIENT = boto3.client("s3")
-
+DYNAMODB_CLIENT = boto3.client("dynamodb")
 
 HEALTHLAKE_LIMIT_TPS = 1
 
@@ -45,6 +46,29 @@ ACCESS_KEY = os.environ.get("ACCESS_KEY")
 SECRET_ACCESS = os.environ.get("SECRET_ACCESS")
 
 NOT_SUPPORTED_OPERATIONS = ["Composition"]
+
+
+def update_dynamodb_log(messageId, status, error_result):
+    try:
+        response = DYNAMODB_CLIENT.update_item(
+            TableName=CCDS_SQSMESSAGE_TABLE_LOG,
+            Key={"id": {"S": messageId}},
+            ExpressionAttributeValues={
+                ":s": {
+                    "S": status,
+                },
+                ":e": {
+                    "S": error_result,
+                },
+            },
+            ExpressionAttributeNames={"#status_message": "status", "#error_message": "error"},
+            UpdateExpression="SET #status_message=:s, #error_message=:e",
+            ReturnValues="UPDATED_NEW",
+        )
+        return response
+    except Exception as e:
+        LOGGER.error(f"## DYNAMODB PUT MESSAGEID EXCEPTION: {str(e)}")
+        raise e
 
 
 def post_healthlake(full_url, headers, fhir_resource, event):
@@ -78,8 +102,11 @@ def lambda_handler(event, context):
     # Split each entry and each Resource Type and send it to Health Lake
     # Save log in each iteration/resource persist
     # completes the Iterator
+    sqs_message_id = event["Source"]["sqs_message_id"]
+
     if ACCESS_KEY is None or SECRET_ACCESS is None:
         event["Status"] = "FAILED"
+        update_dynamodb_log(sqs_message_id, event["Status"], "ERROR: STEP6, No access key is available")
         raise AWSKeyMissingError(event, "No access key is available.")
 
     if event["Status"] == "DATASETS_GENERATED":
@@ -89,8 +116,6 @@ def lambda_handler(event, context):
         year = str(datetime.today().year)
         month = str(datetime.today().month)
         day = str(datetime.today().day)
-
-        sqs_message_id = event["Source"]["sqs_message_id"]
 
         fhir_bucket = event["Fhir"]["bucket"]
         fhir_filename = event["Fhir"]["key"]
@@ -150,8 +175,10 @@ def lambda_handler(event, context):
         time.sleep(HEALTHLAKE_LIMIT_TPS)
 
         event["Status"] = "COMPLETED"
+        update_dynamodb_log(sqs_message_id, event["Status"], "")
     else:
         event["Status"] = "FAILED"
-        raise Exception
+        update_dynamodb_log(sqs_message_id, event["Status"], "ERROR: STEP6, Fail to save FHIR Bundle to HelathLake")
+        raise Exception("Fail to save FHIR Bundle to HelathLake")
 
     return event
