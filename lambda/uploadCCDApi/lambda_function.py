@@ -12,7 +12,7 @@ def lambda_handler(event, context):
     FILE_NAME=f"{context.aws_request_id}.xml"
 
     res = json.loads(json.dumps(event))
-    xml = res['body'].read()
+    xml = base64.b64decode(res['body'])
 
     print(json.dumps(event))
     print(context.aws_request_id)
