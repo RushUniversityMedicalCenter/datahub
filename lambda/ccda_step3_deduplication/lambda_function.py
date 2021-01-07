@@ -82,8 +82,20 @@ def is_hash_existent(messageId, ccd_hash) -> bool:
         response = DYNAMODB_CLIENT.get_item(TableName=CCDS_HASH_TABLE_LOG, Key={"ccd_hash": {"S": ccd_hash}})
 
         if "Item" in response:
-            LOGGER.info(f"CCDA HASH {ccd_hash} already found in table ")
-            return True
+            message_id_hash = response["Item"]["messageId"]["S"]
+            LOGGER.info(f"CCDA HASH {ccd_hash} already found in table, message_id {message_id_hash}")
+
+            message_log_response = DYNAMODB_CLIENT.get_item(
+                TableName=CCDS_SQSMESSAGE_TABLE_LOG, Key={"id": {"S": message_id_hash}}
+            )
+            if "Item" in message_log_response:
+                if message_log_response["Item"]["status"]["S"] == "COMPLETED":
+                    LOGGER.info(f"message_log_response: {message_log_response}")
+                    return True
+                else:
+                    return False
+            else:
+                return False
         else:
             now = datetime.now()
             creation_date = int(now.timestamp())
