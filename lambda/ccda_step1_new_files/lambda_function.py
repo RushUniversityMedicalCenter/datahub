@@ -84,6 +84,7 @@ def lambda_handler(event, context):
             if record["Record"]["eventSource"] == "aws:s3":
 
                 sqs_message_id = record["Source"]["sqs_message_id"]
+                receiptHandle = record["Source"]["receiptHandle"]
 
                 filename = record["Record"]["s3"]["object"]["key"]
                 bucket_landing = record["Record"]["s3"]["bucket"]["name"]
@@ -105,6 +106,7 @@ def lambda_handler(event, context):
                         "Source": {
                             "sqs_message_id": sqs_message_id,
                             "aws_request_id": aws_request_id,
+                            "receiptHandle": receiptHandle,
                         },
                         "Object": {"bucket": bucket_landing, "key": filename},
                     }
@@ -127,6 +129,7 @@ def lambda_handler(event, context):
                         "Source": {
                             "sqs_message_id": sqs_message_id,
                             "aws_request_id": aws_request_id,
+                            "receiptHandle": receiptHandle,
                         },
                         "Object": {"bucket": bucket_landing, "key": filename},
                         "Status": "FAILED",

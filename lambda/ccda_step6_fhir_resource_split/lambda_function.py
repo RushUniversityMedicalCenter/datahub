@@ -36,8 +36,8 @@ FOLDER_PROCESSED_FHIR_RESOURCES = os.environ["FOLDER_PROCESSED_FHIR_RESOURCES"]
 HEALTHLAKE_ENDPOINT = os.environ["HEALTHLAKE_ENDPOINT"]
 HEALTHLAKE_CANONICAL_URI = os.environ["HEALTHLAKE_CANONICAL_URI"]
 
-
 S3_CLIENT = boto3.client("s3")
+SQS_CLIENT = boto3.client("sqs")
 DYNAMODB_CLIENT = boto3.client("dynamodb")
 
 HEALTHLAKE_LIMIT_TPS = 1
@@ -175,6 +175,9 @@ def lambda_handler(event, context):
         time.sleep(HEALTHLAKE_LIMIT_TPS)
 
         event["Status"] = "COMPLETED"
+        bucket_landing = event["Object"]["bucket"]
+        key = event["Object"]["key"]
+        S3_CLIENT.delete_object(Bucket=bucket_landing, Key=f"{key}")
         update_dynamodb_log(sqs_message_id, event["Status"], "")
     else:
         event["Status"] = "FAILED"
