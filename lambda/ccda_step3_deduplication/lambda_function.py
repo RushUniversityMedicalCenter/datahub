@@ -57,13 +57,14 @@ def update_dynamodb_log(messageId, status, error_result):
         raise e
 
 
-def put_dynamodb_hash(messageId, creation_date, ccd_hash):
+def put_dynamodb_hash(messageId, creation_date, ccd_hash, filename):
     try:
         DYNAMODB_CLIENT.put_item(
             TableName=CCDS_HASH_TABLE_LOG,
             Item={
                 "ccd_hash": {"S": ccd_hash},
                 "messageId": {"S": messageId},
+                "filename": {"S": filename},
                 "creation_date": {"N": f"{creation_date}"},
             },
         )
@@ -72,7 +73,7 @@ def put_dynamodb_hash(messageId, creation_date, ccd_hash):
         raise err("Error adding hash to table")
 
 
-def is_hash_existent(messageId, ccd_hash) -> bool:
+def is_hash_existent(messageId, ccd_hash, filename) -> bool:
     """
     Query the DynamoDB 'message' table for the item containing the given message ID
     :param message_id: the message ID to be included in the query
@@ -99,7 +100,7 @@ def is_hash_existent(messageId, ccd_hash) -> bool:
         else:
             now = datetime.now()
             creation_date = int(now.timestamp())
-            put_dynamodb_hash(messageId, creation_date, ccd_hash)
+            put_dynamodb_hash(messageId, creation_date, ccd_hash, filename)
             return False
     except ClientError as err:
         LOGGER.error(err)
@@ -126,7 +127,7 @@ def lambda_handler(event, context):
         ccd_hash = str(hashlib.md5(ccd_content).hexdigest())
         # print(ccd_hash)
 
-        is_hash_found = is_hash_existent(sqs_message_id, ccd_hash)
+        is_hash_found = is_hash_existent(sqs_message_id, ccd_hash, filename)
 
         if is_hash_found:
             event["Status"] = "DUPLICATED"
