@@ -82,17 +82,12 @@ def post_healthlake(full_url, headers, fhir_resource, event):
         response.raise_for_status()
         return response
     except Exception as err:
-        if response.status_code == 400:
-            LOGGER.error("----- HEALTHLAKE METHOD NOT SUPPORTED -----")
-            LOGGER.error(err)
-            LOGGER.error(response.text)
-            raise err
         if response.status_code == 429:
             LOGGER.error("----- HEALTHLAKE TOO MANY REQUESTS ERROR -----")
             LOGGER.error(err)
             LOGGER.error(response.text)
             raise HealthLakePostTooManyRequestsError(event, str(err))
-        if response.status_code != 400 and response.status_code != 429:
+        else:
             LOGGER.info(f"----- HEALTHLAKE ERROR CODE {response.status_code} ----- ")
             raise HealthLakePostError(event, str(err))
 
