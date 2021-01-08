@@ -3,26 +3,25 @@ import os
 import boto3
 import logging
 from botocore.exceptions import ClientError
-import hashlib
 from datetime import datetime
-from utils.exceptions import CCDADuplicatedError, InvalidFileError
 
 LOGGER = logging.getLogger()
 LOGGER.setLevel(logging.INFO)
 
 DYNAMODB_CLIENT = boto3.client("dynamodb")
 DYNAMODB_JUVARE_HASH_TABLE_LOG = os.environ["DYNAMODB_JUVARE_HASH_TABLE_LOG"]
-DYNAMODB_JUVARE_MESSAGE_TABLE_LOG = os.environ["DYNAMODB_JUVARE_MESSAGE_TABLE_LOG"]
+DYNAMODB_JUVARE_EXECUTION_LOG = os.environ["DYNAMODB_JUVARE_EXECUTION_LOG"]
 
 
-def put_dynamodb_log(lambdaId, status, creation_date, error_result):
+def put_dynamodb_log(lambdaId, status, creation_date, event, error_result):
     try:
         DYNAMODB_CLIENT.put_item(
-            TableName=DYNAMODB_JUVARE_MESSAGE_TABLE_LOG,
+            TableName=DYNAMODB_JUVARE_EXECUTION_LOG,
             Item={
                 "lambdaId": {"S": lambdaId},
                 "creation_date": {"N": f"{creation_date}"},
                 "status": {"S": status},
+                "event": {"S": event},
                 "error": {"S": json.dumps(error_result)},
             },
         )
@@ -33,7 +32,7 @@ def put_dynamodb_log(lambdaId, status, creation_date, error_result):
 def update_dynamodb_log(lambdaId, status, error_result):
     try:
         response = DYNAMODB_CLIENT.update_item(
-            TableName=DYNAMODB_JUVARE_MESSAGE_TABLE_LOG,
+            TableName=DYNAMODB_JUVARE_EXECUTION_LOG,
             Key={"lambdaId": {"S": lambdaId}},
             ExpressionAttributeValues={
                 ":s": {
@@ -58,7 +57,7 @@ def put_dynamodb_hash(lambdaId, creation_date, ccd_hash):
         DYNAMODB_CLIENT.put_item(
             TableName=DYNAMODB_JUVARE_HASH_TABLE_LOG,
             Item={
-                "md5_digest": {"S": ccd_hash},
+                "md5Digest": {"S": ccd_hash},
                 "lambdaId": {"S": lambdaId},
                 "creation_date": {"N": f"{creation_date}"},
             },
@@ -76,15 +75,15 @@ def is_hash_existent(lambdaId, md5_digest) -> bool:
     """
     try:
         response = DYNAMODB_CLIENT.get_item(
-            TableName=DYNAMODB_JUVARE_HASH_TABLE_LOG, Key={"md5_digest": {"S": md5_digest}}
+            TableName=DYNAMODB_JUVARE_HASH_TABLE_LOG, Key={"md5Digest": {"S": md5_digest}}
         )
 
         if "Item" in response:
             lambdaId_hash = response["Item"]["lambdaId"]["S"]
-            LOGGER.info(f"JUVARE HASH {md5_digest} already found in table, message_id {lambdaId_hash}")
+            LOGGER.info(f"JUVARE HASH {md5_digest} already found in table, lambdaId {lambdaId_hash}")
 
             message_log_response = DYNAMODB_CLIENT.get_item(
-                TableName=DYNAMODB_JUVARE_MESSAGE_TABLE_LOG, Key={"lambdaId": {"S": lambdaId_hash}}
+                TableName=DYNAMODB_JUVARE_EXECUTION_LOG, Key={"lambdaId": {"S": lambdaId_hash}}
             )
             if "Item" in message_log_response:
                 if message_log_response["Item"]["status"]["S"] == "COMPLETED":
