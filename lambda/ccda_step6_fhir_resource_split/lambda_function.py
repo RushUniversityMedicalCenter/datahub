@@ -42,8 +42,11 @@ DYNAMODB_CLIENT = boto3.client("dynamodb")
 
 HEALTHLAKE_LIMIT_TPS = 1
 
-ACCESS_KEY = os.environ.get("ACCESS_KEY")
-SECRET_ACCESS = os.environ.get("SECRET_ACCESS")
+# ACCESS_KEY = os.environ.get("ACCESS_KEY")
+# SECRET_ACCESS = os.environ.get("SECRET_ACCESS")
+ACCESS_KEY = os.environ.get("AWS_ACCESS_KEY_ID")
+SECRET_ACCESS = os.environ.get("AWS_SECRET_ACCESS_KEY")
+SESSION_TOKEN = os.environ.get("AWS_SESSION_TOKEN")
 
 NOT_SUPPORTED_OPERATIONS = ["Composition"]
 
@@ -139,7 +142,8 @@ def lambda_handler(event, context):
 
         full_url = f"{HEALTHLAKE_ENDPOINT}{resource_type}"
 
-        headers = aws_signature.generate_headers(ACCESS_KEY, SECRET_ACCESS, request_parameters, canonical_uri)
+        # headers = aws_signature.generate_headers(ACCESS_KEY, SECRET_ACCESS, request_parameters, canonical_uri)
+        headers = aws_signature.generate_headers(ACCESS_KEY, SECRET_ACCESS, SESSION_TOKEN, request_parameters, canonical_uri)
 
         response = post_healthlake(full_url, headers, request_parameters, event)
 

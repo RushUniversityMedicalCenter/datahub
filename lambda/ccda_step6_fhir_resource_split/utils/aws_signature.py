@@ -41,7 +41,7 @@ def getSignatureKey(key, date_stamp, regionName, serviceName):
     return kSigning
 
 
-def generate_headers(access_key, secret_key, request_parameters, canonical_uri):
+def generate_headers(access_key, secret_key, session_token, request_parameters, canonical_uri):
     # Create a date for headers and the credential string
     t = datetime.datetime.utcnow()
     amz_date = t.strftime("%Y%m%dT%H%M%SZ")
@@ -146,6 +146,7 @@ def generate_headers(access_key, secret_key, request_parameters, canonical_uri):
         "Content-Type": content_type,
         "X-Amz-Date": amz_date,
         "Authorization": authorization_header,
+        "X-Amz-Security-Token": session_token,
     }
 
     return headers

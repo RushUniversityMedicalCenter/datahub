@@ -38,18 +38,21 @@ export class fhirConvStack extends Stack {
     const fhirConvertor = new ecs_patterns.ApplicationLoadBalancedFargateService(this, "FhirConverter", {
       cluster: ecsCluster, // Required
       assignPublicIp: false,
-      cpu: 512, // Default is 256
+      cpu: 1024, // Default is 256
       desiredCount: 2, // Default is 1
       taskImageOptions: {
         image: ecs.ContainerImage.fromRegistry("healthplatformregistry.azurecr.io/fhirconverter:v2.0.0"),
         containerPort: 2019,
+        enableLogging: true,
       },
-      memoryLimitMiB: 2048, // Default is 512
+      memoryLimitMiB: 4096, // Default is 512
       publicLoadBalancer: false, // Default is false
       openListener: false
+
     });
 
     fhirConvertor.loadBalancer.addSecurityGroup(fhirConvSg)
+
 
     new CfnOutput(this, 'fhirConvertorExport', {
       value: 'http://'+fhirConvertor.loadBalancer.loadBalancerDnsName,
