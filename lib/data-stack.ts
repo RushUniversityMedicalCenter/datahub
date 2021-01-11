@@ -14,7 +14,6 @@ import {SqsEventSource} from '@aws-cdk/aws-lambda-event-sources';
 import {LambdaProxyIntegration} from '@aws-cdk/aws-apigatewayv2-integrations';
 import {App, CfnOutput, Duration, Fn, Stack, StackProps} from "@aws-cdk/core";
 import {createLambda, createLambdaWithLayer, creates3bucket} from "./helpers";
-import {HttpMethod} from "@aws-cdk/aws-apigatewayv2";
 
 export interface dataStackProps extends StackProps {
   readonly envName: string;
@@ -29,6 +28,7 @@ export class dataStack extends Stack {
     const privateSubnetIds = Fn.split(",", Fn.importValue(envName+"-privateSubnets"));
     const fhirConvSgId = Fn.importValue(envName+"-fhirConvSg");
     const fhirConvUrl = Fn.importValue(envName+'-fhir-convertor-url')
+
 
     const vpc = ec2.Vpc.fromVpcAttributes(this, "importedVpc", {
       vpcId: Fn.importValue(envName+"-vpcId"),
@@ -49,19 +49,21 @@ export class dataStack extends Stack {
     roleLambdaProcessCCD.addManagedPolicy(iam.ManagedPolicy.fromAwsManagedPolicyName('service-role/AWSLambdaVPCAccessExecutionRole'))
     roleLambdaProcessCCD.addManagedPolicy(iam.ManagedPolicy.fromAwsManagedPolicyName('service-role/AWSLambdaRole'))
     roleLambdaProcessCCD.addManagedPolicy(iam.ManagedPolicy.fromAwsManagedPolicyName('AWSStepFunctionsFullAccess'))
+
+    const healthLakePolicy = new iam.Policy(this, 'HealthLakeFullAccessPolicy')
+    healthLakePolicy.addStatements(new iam.PolicyStatement({
+      resources:['*'],
+      actions:['healthlake:*'],
+    }))
+    healthLakePolicy.attachToRole(roleLambdaProcessCCD)
+    // roleLambdaProcessCCD.addToPolicy(new iam.PolicyStatement({
+    //   resources:['*'],
+    //   actions:['healthlake:*'],
+    // }));
     // add dynamodb access
     // add s3 access
 
-    // glue service role
-    const roleGlueService = new iam.Role(this, 'roleGlueService',{
-      assumedBy: new iam.CompositePrincipal(
-        new iam.ServicePrincipal("glue.amazonaws.com"),
-        new iam.ServicePrincipal("lambda.amazonaws.com")
-      ),
-      // Glue role name must follow the below syntax. AWSGlueServiceRole Prefix is required for Glue to work properly.
-      roleName: "AWSGlueServiceRole-"+envName
-    })
-    roleGlueService.addManagedPolicy(iam.ManagedPolicy.fromAwsManagedPolicyName('service-role/AWSGlueServiceRole'))
+
 
 
     //
@@ -77,7 +79,6 @@ export class dataStack extends Stack {
       alias: envName+'-processed-key'
     })
     kmsProcessedKey.grantEncryptDecrypt(roleLambdaProcessCCD)
-    kmsProcessedKey.grantEncryptDecrypt(roleGlueService)
 
     const kmsDatabaseKey = new kms.Key(this, 'kmsDatabaseKey',{
       alias: envName+'-database-key'
@@ -97,31 +98,14 @@ export class dataStack extends Stack {
     const s3LandingSftp = new creates3bucket(this, 'landing-sftp', kmsLandingKey)
     s3LandingSftp.bucket.grantReadWrite(roleLambdaProcessCCD)
 
-    const s3LandingJuvare = new creates3bucket(this, 'landing-juvare', kmsLandingKey)
-    s3LandingJuvare.bucket.grantReadWrite(roleLambdaProcessCCD)
+    // const s3LandingJuvare = new creates3bucket(this, 'landing-juvare', kmsLandingKey)
+    // s3LandingJuvare.bucket.grantReadWrite(roleLambdaProcessCCD)
 
     // Processed Bucket
     const s3Processed = new creates3bucket(this, 'processed', kmsProcessedKey)
     s3Processed.bucket.grantReadWrite(roleLambdaProcessCCD)
-    s3Processed.bucket.grantReadWrite(roleGlueService)
 
-    // Athena Queries bucket. AES256 encrypted to allow users to use the bucket for athena queries
-    const s3AthenaQueries = new s3.Bucket(this, 'athena-queries',{
-      encryption: s3.BucketEncryption.S3_MANAGED,
-      blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
-      versioned: true,
-      lifecycleRules: [
-        {
-          transitions: [
-            {
-              storageClass: s3.StorageClass.GLACIER,
-              transitionAfter: Duration.days(30)
-            }
-          ]
-        }
-      ]
-    });
-    s3AthenaQueries.grantReadWrite(roleGlueService)
+
 
 
     // dynamodb
@@ -189,10 +173,6 @@ export class dataStack extends Stack {
     s3LandingDirect.bucket.addEventNotification(s3.EventType.OBJECT_CREATED, new s3n.SqsDestination(ccdQueue))
     s3LandingApi.bucket.addEventNotification(s3.EventType.OBJECT_CREATED, new s3n.SqsDestination(ccdQueue))
     s3LandingSftp.bucket.addEventNotification(s3.EventType.OBJECT_CREATED, new s3n.SqsDestination(ccdQueue))
-    s3LandingJuvare.bucket.addEventNotification(s3.EventType.OBJECT_CREATED, new s3n.SqsDestination(ccdQueue))
-
-
-
 
     //
     // app stack elements
@@ -207,11 +187,7 @@ export class dataStack extends Stack {
       layerVersionName: envName+'-pandas-awswrangler-requests'
     })
 
-    const layerXlrd = new lambda.LayerVersion(this, 'xlrd', {
-      code: lambda.Code.fromAsset('lambda_layer/xlrd.zip'),
-      compatibleRuntimes: [lambda.Runtime.PYTHON_3_8],
-      layerVersionName: envName+'-xlrd'
-    })
+
 
 
     const ccda_step1_new_files = new createLambda(this, envName, roleLambdaProcessCCD, 'ccda_step1_new_files',
@@ -272,12 +248,10 @@ export class dataStack extends Stack {
         FOLDER_PROCESSED_FHIR_RESOURCES: 'fhir_resources',
         HEALTHLAKE_ENDPOINT:'https://healthlake.us-east-1.amazonaws.com/datastore/c93bb7da51d252aac7f77e831d5ca29f/r4/',
         HEALTHLAKE_CANONICAL_URI: '/datastore/c93bb7da51d252aac7f77e831d5ca29f/r4/',
-        ACCESS_KEY: 'AKIA6AFCJYENA65NRF23',
-        SECRET_ACCESS: '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'
       });
 
     // todo parameterize healthlake endpoint.
-    // todo parameterize accesskey secretkey via secrets if role does not work
+    // done todo parameterize accesskey secretkey via secrets if role does not work
 
     const ccda_exception_handler = new createLambda(this, envName, roleLambdaProcessCCD, 'ccda_exception_handler',
       {
@@ -286,7 +260,9 @@ export class dataStack extends Stack {
     })
 
     const ccda_finish_stepfunction = new createLambda(this, envName, roleLambdaProcessCCD, 'ccda_finish_stepfunction',
-      {}
+      {
+        SQS_QUEUE_URL: ccdQueue.queueUrl
+      }
     );
 
 
@@ -417,7 +393,7 @@ export class dataStack extends Stack {
         apiName: envName+'-UploadCCD',
         corsPreflight: {
           allowHeaders: ['*'],
-          allowMethods: [HttpMethod.POST],
+          allowMethods: [api.HttpMethod.POST],
           allowOrigins: ['*'],
         }
       });
@@ -454,10 +430,7 @@ export class dataStack extends Stack {
       exportName: envName+'-kmsDatabaseKey'
     });
 
-    new CfnOutput(this, 'roleGlueServiceExport', {
-      value: roleGlueService.roleArn,
-      exportName: envName+'-roleGlueService'
-    });
+
 
     new CfnOutput(this, 'roleLambdaProcessCCDExport', {
       value: roleLambdaProcessCCD.roleArn,
