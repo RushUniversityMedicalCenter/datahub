@@ -36,7 +36,7 @@ BUCKET_RAW_JUVARE_FOLDER = os.environ["BUCKET_RAW_JUVARE_FOLDER"]  # raw_daily_h
 
 GLUE_CATALOG_NAME = os.environ["GLUE_CATALOG_NAME"]
 GLUE_DB_NAME = os.environ["GLUE_DB_NAME"]
-GLUE_CRAWLER_JUVARE_HAVE_BED = os.environ["GLUE_CRAWLER_JUVARE_HAVE_BED"]
+GLUE_CRAWLER_JUVARE_CDPH_IDPH = os.environ["GLUE_CRAWLER_JUVARE_CDPH_IDPH"]
 
 SNS_TOPIC_ARN = os.environ["SNS_TOPIC_ARN"]
 
@@ -139,7 +139,7 @@ def lambda_handler(event, context):
     result_convertion = csv_from_excel(filename, bucket_landing, lambdaId)
 
     try:
-        response = GLUE_CLIENT.start_crawler(Name=GLUE_CRAWLER_JUVARE_HAVE_BED)
+        response = GLUE_CLIENT.start_crawler(Name=GLUE_CRAWLER_JUVARE_CDPH_IDPH)
     except Exception as err:
         LOGGER.error("---- ERROR RUNING CDPH IDPH CRAWLER ----")
         LOGGER.error(str(err))

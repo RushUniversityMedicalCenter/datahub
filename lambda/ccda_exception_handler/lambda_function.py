@@ -11,13 +11,13 @@ Exceptions types:
     2 - ConverterError: Occurrs when the Converter returns a 4xx or 5xx error
     3 - FhirDatasetsGenerationError: Occurrs when the Dataset generation from the FHIR resources are not generated
 -----
-Last Modified: Wednesday, 6th January 2021 9:08:08 am
+Last Modified: Monday, 11th January 2021 2:20:10 pm
 Modified By: Canivel, Danilo (dccanive@amazon.com>)
 -----
 Copyright 2020 - 2020 Amazon Web Services, Amazon
 """
 
-
+# Import the libraries
 import time
 import json
 import boto3
@@ -26,15 +26,29 @@ from datetime import datetime
 import logging
 from botocore.exceptions import ClientError
 
+
+# Instatiate the Logger to save messages to Cloudwatch
 LOGGER = logging.getLogger()
 LOGGER.setLevel(logging.INFO)
+
+# Load the enviroment variables
 CCDS_SFN_EXCEPTIONS_LOG = os.environ["CCDS_SFN_EXCEPTIONS_LOG"]
 CCDS_HASH_TABLE_LOG = os.environ["CCDS_HASH_TABLE_LOG"]
 
+# Instantiate the service clients
 DYNAMODB_CLIENT = boto3.client("dynamodb")
 
 
 def save_dynamodb_log(aws_request_id, sqs_message_id, source_event, creation_date, error_type):
+    """Save log into DynamoDB table for the sqs messages log
+
+    Args:
+        aws_request_id (str): AWS request id (Lambda id), generated from the main Lambda execution
+        sqs_message_id (str): SQS message id, comes with each Record inside Records
+        source_event (str): Json string with the full event from the handler
+        creation_date (int): Timestamp of the event
+        error_type (str): Error description, empty if None
+    """
     try:
         DYNAMODB_CLIENT.put_item(
             TableName=CCDS_SFN_EXCEPTIONS_LOG,
@@ -51,6 +65,14 @@ def save_dynamodb_log(aws_request_id, sqs_message_id, source_event, creation_dat
 
 
 def delete_hash_log(md5_digest):
+    """Remove the hash from the DynamoDB Hash table log if needed
+
+    Args:
+        md5_digest (str): String with md5 digest hash
+
+    Returns:
+        bool: If deleted returns True otherwise False
+    """
     try:
         resp = DYNAMODB_CLIENT.delete_item(TableName=CCDS_HASH_TABLE_LOG, Key={"ccd_hash": {"S": md5_digest}})
         LOGGER.info(resp)
@@ -61,7 +83,20 @@ def delete_hash_log(md5_digest):
 
 
 def lambda_handler(event, context):
-    # TODO implement
+    """Lambda Handler that executes the exception handler
+        First check if the event has a Error key, if True, collect information from the event
+    and send an SNS notification with the error
+        If the error type is not CCDADuplicatedError, save the the log to DynamoDB and,
+    if md5_digest is in the event, we delete the hash from the hash table.
+        Otherwise, we save the log to dynamodb only.
+
+    Args:
+        event (dict): Lambda Event
+        context (dict): Lambda Context
+    Returns:
+        dict: Dictionary with the notification content to be sent to the SNS Topic
+    """
+
     error_type = event.get("Error")
 
     notification_event = {}
@@ -88,7 +123,6 @@ def lambda_handler(event, context):
         notification_event["IsDupHashDeleted"] = False
 
         if error_type != "CCDADuplicatedError":
-            # @TODO Send message to Dead-Letter with Error Status
             save_dynamodb_log(aws_request_id, sqs_message_id, source_event, creation_date, error_type)
             if "md5_digest" in source_event["Object"]:
                 is_dup_deleted = delete_hash_log(source_event["Object"]["md5_digest"])

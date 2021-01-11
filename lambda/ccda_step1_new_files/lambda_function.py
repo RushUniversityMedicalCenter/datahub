@@ -16,7 +16,7 @@ Modified By: Canivel, Danilo (dccanive@amazon.com>)
 -----
 Copyright 2020 - 2020 Amazon Web Services, Amazon
 """
-
+# Import the libraries
 import json
 import time
 import boto3
@@ -26,20 +26,41 @@ import logging
 from botocore.exceptions import ClientError
 from urllib.parse import unquote_plus
 from pathlib import Path
+import importlib
 
+# Instatiate the Logger to save messages to Cloudwatch
 LOGGER = logging.getLogger()
 LOGGER.setLevel(logging.INFO)
-DYNAMODB_CLIENT = boto3.client("dynamodb")
+
+# Load the enviroment variables
 CCDS_SQSMESSAGE_TABLE_LOG = os.environ["CCDS_SQSMESSAGE_TABLE_LOG"]
 BUCKET_PROCESSED_CCDS = os.environ["BUCKET_PROCESSED_CCDS"]
 FOLDER_PROCESSED_CCDS = os.environ["FOLDER_PROCESSED_CCDS"]
+
+# Instantiate the service clients
+DYNAMODB_CLIENT = boto3.client("dynamodb")
 S3_CLIENT = boto3.client("s3")
 
-# Not supported yet
+"""@TODO
+Currently not supported, needs more validation if there is usecase to handle compressed batches.
+"""
 BATCH_TYPES = [".zip", ".gz"]
 
 
 def update_dynamodb_log(messageId, status, error_result):
+    """Updates the current status of the message log
+
+    Args:
+        messageId (str): SQS message id, comes with each Record inside Records
+        status (str): Current Status of the pipeline
+        error_result (str): Error description, empty if None
+
+    Raises:
+        e: Client Exception if error updating the record
+
+    Returns:
+        dict: Object updated
+    """
     try:
         response = DYNAMODB_CLIENT.update_item(
             TableName=CCDS_SQSMESSAGE_TABLE_LOG,
@@ -63,18 +84,40 @@ def update_dynamodb_log(messageId, status, error_result):
 
 
 def check_suffix(filepath):
+    """Get the suffix of a filepath
+
+    Args:
+        filepath (str): File path
+
+    Returns:
+        str: Suffix of the file path
+    """
     suffix = Path(filepath).suffix
     return suffix
 
 
 def lambda_handler(event, context):
+    """Lambda Handler that executes Step 1 of the Pipeline
+        Check if there is a 'Records' key in the event and for each Record check the type of file by the filetype
+        If the file is in the compress list:
+            @TODO:
+                - open the compressed list locally, copy each file to the Raw folder
+                - Add each Record to the list of Records
+
+        If not int the compress list, add the record to the list.
+
+    Args:
+        event (dict): Lambda Event
+        context (dict): Lambda Context
+    Returns:
+        dict: Dictionary with list of Records to be processed in the next step
+    """
     LOGGER.info(event)
 
     year = str(datetime.today().year)
     month = str(datetime.today().month)
     day = str(datetime.today().day)
 
-    # sqs_message_id = event['Source']['sqs_message_id']
     aws_request_id = event["aws_request_id"]
 
     input_next_step = {"Records": []}
@@ -112,7 +155,7 @@ def lambda_handler(event, context):
                     }
 
                     if suffix in BATCH_TYPES:
-                        # unzip and add each file separated to the list
+                        # @TODO: unzip and add each file separated to the list
                         file_record["Status"] = "COMPRESSED_FILE"
                         error_results = "Compressed Files are not supported at this moment"
                         update_dynamodb_log(sqs_message_id, file_record["Status"], error_results)
@@ -124,7 +167,6 @@ def lambda_handler(event, context):
                     input_next_step["Records"].append(file_record)
 
                 except Exception as err:
-                    # @TODO Save Fail copy to DB
                     file_record = {
                         "Source": {
                             "sqs_message_id": sqs_message_id,
