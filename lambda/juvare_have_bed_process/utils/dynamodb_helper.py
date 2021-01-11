@@ -13,12 +13,13 @@ DYNAMODB_JUVARE_HASH_TABLE_LOG = os.environ["DYNAMODB_JUVARE_HASH_TABLE_LOG"]
 DYNAMODB_JUVARE_EXECUTION_LOG = os.environ["DYNAMODB_JUVARE_EXECUTION_LOG"]
 
 
-def put_dynamodb_log(lambdaId, status, creation_date, event, error_result):
+def put_dynamodb_log(lambdaId, filename, status, creation_date, event, error_result):
     try:
         DYNAMODB_CLIENT.put_item(
             TableName=DYNAMODB_JUVARE_EXECUTION_LOG,
             Item={
                 "lambdaId": {"S": lambdaId},
+                "filename": {"S": filename},
                 "creation_date": {"N": f"{creation_date}"},
                 "status": {"S": status},
                 "event": {"S": event},
@@ -52,13 +53,14 @@ def update_dynamodb_log(lambdaId, status, error_result):
         raise e
 
 
-def put_dynamodb_hash(lambdaId, creation_date, ccd_hash):
+def put_dynamodb_hash(lambdaId, creation_date, ccd_hash, filename):
     try:
         DYNAMODB_CLIENT.put_item(
             TableName=DYNAMODB_JUVARE_HASH_TABLE_LOG,
             Item={
                 "md5Digest": {"S": ccd_hash},
                 "lambdaId": {"S": lambdaId},
+                "filename": {"S": filename},
                 "creation_date": {"N": f"{creation_date}"},
             },
         )
@@ -67,7 +69,7 @@ def put_dynamodb_hash(lambdaId, creation_date, ccd_hash):
         raise err("Error adding hash to table")
 
 
-def is_hash_existent(lambdaId, md5_digest) -> bool:
+def is_hash_existent(lambdaId, md5_digest, filename) -> bool:
     """
     Query the DynamoDB 'message' table for the item containing the given message ID
     :param message_id: the message ID to be included in the query
@@ -96,7 +98,7 @@ def is_hash_existent(lambdaId, md5_digest) -> bool:
         else:
             now = datetime.now()
             creation_date = int(now.timestamp())
-            put_dynamodb_hash(lambdaId, creation_date, md5_digest)
+            put_dynamodb_hash(lambdaId, creation_date, md5_digest, filename)
             return False
     except ClientError as err:
         LOGGER.error(err)
