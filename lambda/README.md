@@ -6,6 +6,8 @@ All lambdas are executed using a step machine, defined below:
 
 ![FullSFN](../../images/stepfunctions/full_sfn.png)
 
+Bellow is each step definition and documentation.
+
 - Step 0: [Start the State Machine](./ccda_step0_start_state_machine)
 - Step 1: [List the Files](./ccda_step1_new_files)
 - Step 2: [Validate each File](./ccda_step2_validation)
@@ -16,4 +18,18 @@ All lambdas are executed using a step machine, defined below:
 - Exception Handler: [Handling Exceptions](./ccda_exception_handler)
 - Finish Execution: [Finish](./ccda_finish_stepfunction)
 
+### Extra Settings
+
+@TODO
+
+### Reprocessing
+
+@TODO
+
+### Debugging
+
+@TODO
+
 ## Juvare parser and Glue update
+
+@TODO
