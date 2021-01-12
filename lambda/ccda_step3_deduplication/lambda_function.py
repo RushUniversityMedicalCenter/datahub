@@ -8,13 +8,12 @@ If the hash exists, terminate the loop, save log of file duplicated
 
 If the file exists, but something Fails in the next steps, the record is cleaned from the table, so it can be reprocessed.
 -----
-Last Modified: Wednesday, 6th January 2021 12:31:36 pm
+Last Modified: Tuesday, 12th January 2021 8:35:54 am
 Modified By: Canivel, Danilo (dccanive@amazon.com>)
 -----
 Copyright 2020 - 2020 Amazon Web Services, Amazon
 """
-
-
+# Import the libraries
 import json
 import os
 import boto3
@@ -24,17 +23,33 @@ import hashlib
 from datetime import datetime
 from utils.exceptions import CCDADuplicatedError, InvalidFileError
 
+# Instatiate the Logger to save messages to Cloudwatch
 LOGGER = logging.getLogger()
 LOGGER.setLevel(logging.INFO)
 
+# Instantiate the service clients
 DYNAMODB_CLIENT = boto3.client("dynamodb")
+S3_CLIENT = boto3.client("s3")
+
+# Load the enviroment variables
 CCDS_HASH_TABLE_LOG = os.environ["CCDS_HASH_TABLE_LOG"]
 CCDS_SQSMESSAGE_TABLE_LOG = os.environ["CCDS_SQSMESSAGE_TABLE_LOG"]
 
-S3_CLIENT = boto3.client("s3")
-
 
 def update_dynamodb_log(messageId, status, error_result):
+    """Updates the current status of the message log
+
+    Args:
+        messageId (str): SQS message id, comes with each Record inside Records
+        status (str): Current Status of the pipeline
+        error_result (str): Error description, empty if None
+
+    Raises:
+        e: Client Exception if error updating the record
+
+    Returns:
+        dict: Object updated
+    """
     try:
         response = DYNAMODB_CLIENT.update_item(
             TableName=CCDS_SQSMESSAGE_TABLE_LOG,
@@ -58,6 +73,17 @@ def update_dynamodb_log(messageId, status, error_result):
 
 
 def put_dynamodb_hash(messageId, creation_date, ccd_hash, filename):
+    """Save MD5 digest hash to DynamoDB if does not exists
+
+    Args:
+        messageId (str): SQS message id, comes with each Record inside Records
+        creation_date (int): Timestamp of the hash
+        ccd_hash (str): MD5 hash key of the file content
+        filename (str): Filename of the CCD or HL7
+
+    Raises:
+        err: ClientError is raised if can't save the record
+    """
     try:
         DYNAMODB_CLIENT.put_item(
             TableName=CCDS_HASH_TABLE_LOG,
@@ -74,10 +100,18 @@ def put_dynamodb_hash(messageId, creation_date, ccd_hash, filename):
 
 
 def is_hash_existent(messageId, ccd_hash, filename) -> bool:
-    """
-    Query the DynamoDB 'message' table for the item containing the given message ID
-    :param message_id: the message ID to be included in the query
-    :return: the item containing the message ID if it exists, otherwise None
+    """Query the DynamoDB hash table log for the item containing the given hash
+
+    Args:
+        messageId (str): SQS message id, comes with each Record inside Records
+        ccd_hash (str): MD5 hash key of the file content
+        filename (str): Filename of the CCD or HL7
+
+    Raises:
+        err: ClientError is raised if can't save the record
+
+    Returns:
+        bool: If found returns True otherwise False
     """
     try:
         response = DYNAMODB_CLIENT.get_item(TableName=CCDS_HASH_TABLE_LOG, Key={"ccd_hash": {"S": ccd_hash}})
@@ -110,10 +144,23 @@ def is_hash_existent(messageId, ccd_hash, filename) -> bool:
 
 
 def lambda_handler(event, context):
-    # 1. read the file in the Processed Bucket
-    # 2. generate the MD5 hash
-    # 3. check the dynamodb table if hash exists
-    # 4. if not exists continue else stop and save log that is duplicate
+    """Validate if file was already processed
+        # 1. Read the file in the Processed Bucket
+        # 2. check the dynamodb table if hash exists
+        # 3. if found, check the status of the message processing, if message status is COMPLETE raises CCDADuplicatedError, otherwise, enter the new hash
+        # 4. if not exists continue processing
+
+    Args:
+        event (dict): Lambda Event
+        context (dict): Lambda Context
+
+    Raises:
+        Exception: InvalidFileError, raised if the file is not valid
+        Exception: CCDADuplicatedError, raised if the hash is already in the hash table
+
+    Returns:
+        dict: Event updated with the md5_digest key containing the hash
+    """
     sqs_message_id = event["Source"]["sqs_message_id"]
 
     bucketname = event["Object"]["bucket"]

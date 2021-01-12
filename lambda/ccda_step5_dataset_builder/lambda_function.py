@@ -6,13 +6,13 @@ Author: Canivel, Danilo (dccanive@amazon.com)
 Description: Generate the FHIR Datasets currently used by Rush and return the FHIR Bundle 
 to be converted into resources
 -----
-Last Modified: Wednesday, 6th January 2021 12:38:15 pm
+Last Modified: Tuesday, 12th January 2021 9:07:55 am
 Modified By: Canivel, Danilo (dccanive@amazon.com>)
 -----
 Copyright 2020 - 2020 Amazon Web Services, Amazon
 """
 
-
+# Import the libraries
 import json
 import requests
 import os
@@ -21,22 +21,37 @@ import logging
 from botocore.exceptions import ClientError
 import awswrangler as wr
 from datetime import datetime
-
 from utils.ccd_load_delta import build_datasets
 from utils.exceptions import FhirDatasetsGenerationError
 
+# Instatiate the Logger to save messages to Cloudwatch
 LOGGER = logging.getLogger()
 LOGGER.setLevel(logging.INFO)
 
+# Load the enviroment variables
 CCDS_SQSMESSAGE_TABLE_LOG = os.environ["CCDS_SQSMESSAGE_TABLE_LOG"]
 BUCKET_PROCESSED_FHIR_DATASETS = os.environ["BUCKET_PROCESSED_FHIR_DATASETS"]
 FOLDER_PROCESSED_FHIRS_DATASETS = os.environ["FOLDER_PROCESSED_FHIRS_DATASETS"]
 
+# Instantiate the service clients
 S3_CLIENT = boto3.client("s3")
 DYNAMODB_CLIENT = boto3.client("dynamodb")
 
 
 def update_dynamodb_log(messageId, status, error_result):
+    """Updates the current status of the message log
+
+    Args:
+        messageId (str): SQS message id, comes with each Record inside Records
+        status (str): Current Status of the pipeline
+        error_result (str): Error description, empty if None
+
+    Raises:
+        e: Client Exception if error updating the record
+
+    Returns:
+        dict: Object updated
+    """
     try:
         response = DYNAMODB_CLIENT.update_item(
             TableName=CCDS_SQSMESSAGE_TABLE_LOG,
@@ -60,6 +75,26 @@ def update_dynamodb_log(messageId, status, error_result):
 
 
 def generate_datasets(fhir_content, filename, message_id, event):
+    """Send  the Fhir bundle to the Dataset Builder, generating the following datasets for each Bundlle:
+        - conditions
+        - encounters
+        - medications
+        - observations
+        - person
+        Save parquet files for each dataset to their specific folder is S3 processed fhir datasets folder.
+
+    Args:
+        fhir_content (str): FHIR Bundle string content
+        filename (str): Name of the file in S3
+        message_id (str): SQS message id, comes with each Record inside Records
+        event (dict): Current event to be logged with the exception if occurss
+
+    Raises:
+        FhirDatasetsGenerationError: Exception raised if the generation of datasets is not sucessfull
+
+    Returns:
+        bool: True if datasets are generated, othwerwise False
+    """
 
     year = str(datetime.today().year)
     month = str(datetime.today().month)
@@ -84,6 +119,25 @@ def generate_datasets(fhir_content, filename, message_id, event):
 
 
 def lambda_handler(event, context):
+    """Generate the Datasets and save PArquet files for each dataset generated.
+    Current supporting the following, required, ResourceTypes:
+        - conditions
+        - encounters
+        - medications
+        - observations
+        - person
+
+    Args:
+        event (dict): Lambda Event
+        context (dict): Lambda Context
+
+    Raises:
+        FhirDatasetsGenerationError: Exception Raised if there is error in the dataset generation
+        Exception: Raised if input content is not correct
+
+    Returns:
+        dict: Event updated with the status DATASETS_GENERATED if everything works.
+    """
     if event["Status"] == "CONVERTED":
 
         sqs_message_id = event["Source"]["sqs_message_id"]

@@ -5,12 +5,13 @@ File Created: Friday, 17th July 2020 7:04:34 pm
 Author: Canivel, Danilo (dccanive@amazon.com)
 Description: Execute the conversion to generate a FHIR Bundle typer Batch
 -----
-Last Modified: Wednesday, 6th January 2021 12:35:26 pm
+Last Modified: Tuesday, 12th January 2021 8:48:48 am
 Modified By: Canivel, Danilo (dccanive@amazon.com>)
 -----
 Copyright 2020 - 2020 Amazon Web Services, Amazon
 """
 
+# Import the libraries
 import json
 import requests
 import os
@@ -20,13 +21,13 @@ from botocore.exceptions import ClientError
 from urllib.parse import unquote_plus
 from pathlib import Path
 from datetime import datetime
-
 from utils.exceptions import ConverterError
 
+# Instatiate the Logger to save messages to Cloudwatch
 LOGGER = logging.getLogger()
 LOGGER.setLevel(logging.INFO)
 
-HEADERS = {"Content-type": "text/plain"}
+# Load the enviroment variables
 CCD_FHIR_CONVERTER_ENDPOINT = (
     os.environ["FHIR_CONVERTER_URL"]
     + os.environ["CCD_FHIR_CONVERTER_ENDPOINT"]
@@ -43,11 +44,28 @@ CCDS_SQSMESSAGE_TABLE_LOG = os.environ["CCDS_SQSMESSAGE_TABLE_LOG"]
 BUCKET_PROCESSED_CCDS = os.environ["BUCKET_PROCESSED_CCDS"]
 FOLDER_PROCESSED_CCDS = os.environ["FOLDER_PROCESSED_CCDS"]
 
+# Instantiate the service clients
 S3_CLIENT = boto3.client("s3")
 DYNAMODB_CLIENT = boto3.client("dynamodb")
 
+# Set extra constants
+HEADERS = {"Content-type": "text/plain"}
+
 
 def update_dynamodb_log(messageId, status, error_result):
+    """Updates the current status of the message log
+
+    Args:
+        messageId (str): SQS message id, comes with each Record inside Records
+        status (str): Current Status of the pipeline
+        error_result (str): Error description, empty if None
+
+    Raises:
+        e: Client Exception if error updating the record
+
+    Returns:
+        dict: Object updated
+    """
     try:
         response = DYNAMODB_CLIENT.update_item(
             TableName=CCDS_SQSMESSAGE_TABLE_LOG,
@@ -71,6 +89,20 @@ def update_dynamodb_log(messageId, status, error_result):
 
 
 def convert_to_fhir(url, headers, ccd_content, event):
+    """Send the file content to the Converter
+
+    Args:
+        url (str: Converter Endpoint
+        headers (dict): Headers to be sent to the Converter API
+        ccd_content (str): Content of the file to be converted
+        event (dict): input event to be logged if Exception is raised
+
+    Raises:
+        ConverterError: Raised if any error happen during convertion, like 4xx, 5xx errors
+
+    Returns:
+        str: If return is 200, returns the converted Fhir Bundle as string
+    """
 
     # check if server is up
     try:
@@ -97,12 +129,20 @@ def convert_to_fhir(url, headers, ccd_content, event):
 
 
 def lambda_handler(event, context):
-    # TODO implement
-    # 1. Read the CCD file and send to the FHIR converter
-    # 2. If returns 200, save the FHIR into the same folder as the original CCD
-    # 3. save the log
-    # 4. forward the Fhir bucket and filename
+    """Convert the CCD or HL7 to FHIR Bundle
+        # 1. Read the CCD file and send to the FHIR converter
+        # 2. If returns 200, save the FHIR into the same folder as the original CCD
+        # 3. save the logs to DynamoDB
+        # 4. Forward the Fhir bucket and filename
+    Args:
+        event (dict): Lambda Event
+        context (dict): Lambda Context
+    Raises:
+        ConverterError: Raised if an error happen during the Convertion Step
 
+    Returns:
+        dict: Updated Event with the  Status CONVERTED, if no Exception is raised
+    """
     year = str(datetime.today().year)
     month = str(datetime.today().month)
     day = str(datetime.today().day)

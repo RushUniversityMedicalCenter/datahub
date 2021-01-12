@@ -6,13 +6,13 @@ Author: Canivel, Danilo (dccanive@amazon.com)
 Description: Persist the FHIR Batch into HealthLake, changing the type to transaction
 and POST it to Health Lake
 -----
-Last Modified: Wednesday, 6th January 2021 12:42:21 pm
+Last Modified: Tuesday, 12th January 2021 9:16:53 am
 Modified By: Canivel, Danilo (dccanive@amazon.com>)
 -----
 Copyright 2020 - 2020 Amazon Web Services, Amazon
 """
 
-
+# Import the libraries
 import sys
 import os
 import base64
@@ -27,31 +27,47 @@ import boto3
 from utils import aws_signature
 from utils.exceptions import HealthLakePostError, AWSKeyMissingError, HealthLakePostTooManyRequestsError
 
+# Instatiate the Logger to save messages to Cloudwatch
 LOGGER = logging.getLogger()
 LOGGER.setLevel(logging.INFO)
 
+# Load the enviroment variables
 CCDS_SQSMESSAGE_TABLE_LOG = os.environ["CCDS_SQSMESSAGE_TABLE_LOG"]
 BUCKET_PROCESSED_FHIR_RESOURCES = os.environ["BUCKET_PROCESSED_FHIR_RESOURCES"]
 FOLDER_PROCESSED_FHIR_RESOURCES = os.environ["FOLDER_PROCESSED_FHIR_RESOURCES"]
 HEALTHLAKE_ENDPOINT = os.environ["HEALTHLAKE_ENDPOINT"]
 HEALTHLAKE_CANONICAL_URI = os.environ["HEALTHLAKE_CANONICAL_URI"]
 
+# Instantiate the service clients
 S3_CLIENT = boto3.client("s3")
 SQS_CLIENT = boto3.client("sqs")
 DYNAMODB_CLIENT = boto3.client("dynamodb")
 
 HEALTHLAKE_LIMIT_TPS = 1
 
-# ACCESS_KEY = os.environ.get("ACCESS_KEY")
-# SECRET_ACCESS = os.environ.get("SECRET_ACCESS")
+# Lambda runtime Access Keys and Session Token
 ACCESS_KEY = os.environ.get("AWS_ACCESS_KEY_ID")
 SECRET_ACCESS = os.environ.get("AWS_SECRET_ACCESS_KEY")
 SESSION_TOKEN = os.environ.get("AWS_SESSION_TOKEN")
 
+# Resources Types not supported without a Bundle
 NOT_SUPPORTED_OPERATIONS = ["Composition"]
 
 
 def update_dynamodb_log(messageId, status, error_result):
+    """Updates the current status of the message log
+
+    Args:
+        messageId (str): SQS message id, comes with each Record inside Records
+        status (str): Current Status of the pipeline
+        error_result (str): Error description, empty if None
+
+    Raises:
+        e: Client Exception if error updating the record
+
+    Returns:
+        dict: Object updated
+    """
     try:
         response = DYNAMODB_CLIENT.update_item(
             TableName=CCDS_SQSMESSAGE_TABLE_LOG,
@@ -75,6 +91,22 @@ def update_dynamodb_log(messageId, status, error_result):
 
 
 def post_healthlake(full_url, headers, fhir_resource, event):
+    """Send the FHIR resource to HealthLake endpoint
+    If a 429 error is returned, the step function will catch the exception wait for 10s and try again.
+    Any other error raises a exception that goes to the Exception Handler
+    Args:
+        full_url (str): HealthLake endpoint
+        headers (dict): Headers for HealthLake authentication containing the AWS Signature
+        fhir_resource (str): FHIR Bundle string content
+        event (dict): Current event to be logged with the exception if occurss
+
+    Raises:
+        HealthLakePostTooManyRequestsError: Exception raised if there is a 429 Error, too many request.
+        HealthLakePostError: Exception raised for any other exception
+
+    Returns:
+        Response: Response from the requests.post
+    """
 
     LOGGER.info(f"HEALTHLAKE POST REQUEST URL: {full_url}")
     LOGGER.info(f"HEALTHLAKE POST Headers: {headers}")
@@ -96,6 +128,22 @@ def post_healthlake(full_url, headers, fhir_resource, event):
 
 
 def lambda_handler(event, context):
+    """Persist the FHIR Resource to HealthLake
+    Get the Fhir Bundle from the event and persist to HealthLake
+    Removes the RAW file from the Landing bucket, since the files are all copied to the Processed bucket
+    Add the HealthLake status to the event
+    Finish the Iteration
+    Args:
+        event (dict): Lambda Event
+        context (dict): Lambda Context
+
+    Raises:
+        AWSKeyMissingError: Raised if can't find the AWS Keys in the Lambda
+        Exception: Raised for any other Exceprtion
+
+    Returns:
+        dict: Event updated with the status COMPLETED if everything works.
+    """
     # REad the FHIr file content
     # Split each entry and each Resource Type and send it to Health Lake
     # Save log in each iteration/resource persist
@@ -138,7 +186,9 @@ def lambda_handler(event, context):
         full_url = f"{HEALTHLAKE_ENDPOINT}{resource_type}"
 
         # headers = aws_signature.generate_headers(ACCESS_KEY, SECRET_ACCESS, request_parameters, canonical_uri)
-        headers = aws_signature.generate_headers(ACCESS_KEY, SECRET_ACCESS, SESSION_TOKEN, request_parameters, canonical_uri)
+        headers = aws_signature.generate_headers(
+            ACCESS_KEY, SECRET_ACCESS, SESSION_TOKEN, request_parameters, canonical_uri
+        )
 
         response = post_healthlake(full_url, headers, request_parameters, event)
 
