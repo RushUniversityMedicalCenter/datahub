@@ -4,12 +4,7 @@ Project: ccda_step1_new_files
 File Created: Friday, 17th July 2020 7:04:34 pm
 Author: Canivel, Danilo (dccanive@amazon.com)
 Description: Process the SQS message, transform into a list of objects.
-Each object represents 1 file that can contain a .zip of XMLs
-or a single XML file to be later converted into FHIR.
-
-If a file is zip, gzip or tar, we send the file to DecompressionStep,
-and from the DecompressionStep each file is sent to ValidateFile Step.
-Otherwise we send it straight to ValidataFile Step
+Each object represents 1 file that can contain a single XML file to be later converted into FHIR.
 -----
 Last Modified: Wednesday, 6th January 2021 11:58:49 am
 Modified By: Canivel, Danilo (dccanive@amazon.com>)

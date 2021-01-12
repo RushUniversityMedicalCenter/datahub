@@ -5,7 +5,18 @@
 In this step we loop through the Records adding each record to a new list of records.
 With this new records, we add the messageId and the receiptHandle, needed for each record to be processed correctly.
 
-![Step0](../../images/stepfunctions/step0.png)
+![Step0](../../images/stepfunctions/step1.png)
+
+#### Enviroment Variables
+
+| Enviroment Variable       | Description                                |
+| ------------------------- | ------------------------------------------ |
+| CCDS_SQSMESSAGE_TABLE_LOG | Table in DynamoDB where the logs are saved |
+| SFN_ARN                   | Step Function ARN                          |
+
+#### Exceptions
+
+@TODO
 
 #### State input sample:
 

@@ -2,7 +2,22 @@
 
 #### lambda_function.py
 
-Lambda Handler that executes Step 6, Save the Fhir Bundle Resource to HealthLake
+Lambda Handler that executes Step 6, Save the Fhir Bundle Resource to HealthLake.
+Current method saves the Bundle as a single Transaction.
+To save each transaction, use the code create_single_resources.py to update the lambda, be aware of the limits of 1TPS imposed by the current limits in HealthLake.
+
+#### Enviroment Variables
+
+| Enviroment Variable             | Description                                |
+| ------------------------------- | ------------------------------------------ |
+| CCDS_SQSMESSAGE_TABLE_LOG       | Table in DynamoDB where the logs are saved |
+| BUCKET_PROCESSED_FHIR_RESOURCES | Bucket where processed FHIRs are saved     |
+| HEALTHLAKE_CANONICAL_URI        | URL parameters for the HealthLake Endpoint |
+| HEALTHLAKE_ENDPOINT             | Endpoint URL for the HealthLake DataStore  |
+
+#### Exceptions
+
+@TODO
 
 ![Step1](../../images/stepfunctions/step6.png)
 

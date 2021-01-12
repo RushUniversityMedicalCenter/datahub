@@ -3,8 +3,29 @@
 #### lambda_function.py
 
 Lambda Handler that executes Step 5, build datasets from the Fhir Resource types in the Bundle response from the converter.
+A Dataset for each of the requried resourceType is generated if exist.
+
+ResourceTypes supported:
+
+- conditions
+- encounters
+- medications
+- observations
+- person
 
 ![Step5](../../images/stepfunctions/step5.png)
+
+#### Enviroment Variables
+
+| Enviroment Variable             | Description                                         |
+| ------------------------------- | --------------------------------------------------- |
+| CCDS_SQSMESSAGE_TABLE_LOG       | Table in DynamoDB where the logs are saved          |
+| BUCKET_PROCESSED_FHIR_DATASETS  | Bucket where processed Datasets from FHIR are saved |
+| FOLDER_PROCESSED_FHIRS_DATASETS | Folder where the FHIR datasets are saved            |
+
+#### Exceptions
+
+@TODO
 
 #### State input sample:
 

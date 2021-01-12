@@ -8,6 +8,16 @@ Add the file type to the output results or return an Exception of Unsuported fil
 
 ![Step1](../../images/stepfunctions/step2.png)
 
+#### Enviroment Variables
+
+| Enviroment Variable       | Description                                |
+| ------------------------- | ------------------------------------------ |
+| CCDS_SQSMESSAGE_TABLE_LOG | Table in DynamoDB where the logs are saved |
+
+#### Exceptions
+
+@TODO
+
 #### State input sample:
 
 ```

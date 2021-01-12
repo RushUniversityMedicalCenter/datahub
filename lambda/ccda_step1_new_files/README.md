@@ -11,6 +11,18 @@ If the file is in the compress list:
 
 If not int the compress list, add the record to the list.
 
+#### Enviroment Variables
+
+| Enviroment Variable       | Description                                       |
+| ------------------------- | ------------------------------------------------- |
+| CCDS_SQSMESSAGE_TABLE_LOG | Table in DynamoDB where the logs are saved        |
+| BUCKET_PROCESSED_CCDS     | Bucket where the processed CCDs or HL7s are saved |
+| FOLDER_PROCESSED_CCDS     | Folder where the converted CCDs or HL7 are saved  |
+
+#### Exceptions
+
+@TODO
+
 ![Step1](../../images/stepfunctions/step1.png)
 
 #### State input sample:

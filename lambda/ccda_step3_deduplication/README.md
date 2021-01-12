@@ -10,7 +10,18 @@ If the hash key already exists an Exception CCDADeduplicationError is Raised and
 
 If the hash does not exists, the md5digest hash is added to the Object key in the output
 
-![Step1](../../images/stepfunctions/step3.png)
+#### Enviroment Variables
+
+| Enviroment Variable       | Description                                 |
+| ------------------------- | ------------------------------------------- |
+| CCDS_SQSMESSAGE_TABLE_LOG | Table in DynamoDB where the logs are saved  |
+| CCDS_HASH_TABLE_LOG       | Table in DynamoDB where MD5 hashs are saved |
+
+#### Exceptions
+
+@TODO
+
+![Step3](../../images/stepfunctions/step3.png)
 
 #### State input sample:
 
