@@ -2,6 +2,17 @@
 
 Lambda responsible to handle the exceptions.
 
+Everytime an execution raise an Exception, it will end at the Fail Step, and a new iteration starts.
+The Exception is Catch by the Exception handler, who performs the process needed and send the error to an SNS Topic.
+
+![Step1](../../images/stepfunctions/exception_handler_sfn.png)
+
+From the SNS Topic, you can subscribe several services to it, or simple executions like send the error to an monitoring email address.
+
+Please see below how to configure the SNS subscriber
+
+### SNS Notification subscriber configuration
+
 #### State input sample:
 
 ```json

@@ -1,6 +1,12 @@
-### Finish step function execution
+### Final Step - Finish step function execution
 
-Lambda responsible to finish the step function execution
+Lambda responsible to finish the step function execution.
+
+At this point all the iterations finish Sucessfully, and the result is a Succesull End trigger.
+
+This will save the logs at DynamoDB and Cloudwatch, and will remove the raw data from the landing bucket, since all the data is been saved and manteined into raw\_\* folder at processed layer.
+
+![Step1](../../images/stepfunctions/full_sfn.png)
 
 #### State input sample:
 
