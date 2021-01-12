@@ -4,6 +4,7 @@ import kms = require('@aws-cdk/aws-kms');
 import iam = require('@aws-cdk/aws-iam');
 import ec2 = require('@aws-cdk/aws-ec2');
 import dynamodb = require('@aws-cdk/aws-dynamodb');
+import glue = require('@aws-cdk/aws-glue');
 import sqs = require('@aws-cdk/aws-sqs');
 import sns = require('@aws-cdk/aws-sns');
 import lambda = require('@aws-cdk/aws-lambda');
@@ -19,7 +20,7 @@ export interface dataStackProps extends StackProps {
   readonly envName: string;
 }
 
-export class dataStack extends Stack {
+export class ccdStack extends Stack {
   constructor(app: App, id: string, props: dataStackProps) {
     super(app, id, props);
 
@@ -63,6 +64,15 @@ export class dataStack extends Stack {
     // add dynamodb access
     // add s3 access
 
+    const roleGlueService = new iam.Role(this, 'roleGlueService',{
+      assumedBy: new iam.CompositePrincipal(
+        new iam.ServicePrincipal("glue.amazonaws.com"),
+        new iam.ServicePrincipal("lambda.amazonaws.com")
+      ),
+      // Glue role name must follow the below syntax. AWSGlueServiceRole Prefix is required for Glue to work properly.
+      roleName: "AWSGlueServiceRole-"+envName
+    })
+    roleGlueService.addManagedPolicy(iam.ManagedPolicy.fromAwsManagedPolicyName('service-role/AWSGlueServiceRole'))
 
 
 
@@ -104,8 +114,7 @@ export class dataStack extends Stack {
     // Processed Bucket
     const s3Processed = new creates3bucket(this, 'processed', kmsProcessedKey)
     s3Processed.bucket.grantReadWrite(roleLambdaProcessCCD)
-
-
+    s3Processed.bucket.grantReadWrite(roleGlueService)
 
 
     // dynamodb
@@ -404,6 +413,26 @@ export class dataStack extends Stack {
         handler: lambdaUploadCCDApi.lambdaFunction
       })
     })
+
+    //
+    // Glue Crawler for FHIR
+    //
+    const glueDbFhir = new glue.Database(this, envName+'fhir',{
+      databaseName: envName+'-fhir'
+    })
+
+    const FHIRProcessedCrawler = new glue.CfnCrawler(this, 'FHIRProcessedCrawler',{
+      name: envName+'FHIRProcessedCrawler',
+      role: roleGlueService.roleArn,
+      databaseName: glueDbFhir.databaseName,
+      schedule: {"scheduleExpression": "cron(0 0 * * ? *)"},
+      targets: {
+        s3Targets: [{
+          path: 's3://'+s3Processed.bucket.bucketName+'/fhir_datasets/'
+        }]
+      }
+    })
+
 
     //
     // SFTP Endpoint
