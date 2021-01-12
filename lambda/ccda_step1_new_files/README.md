@@ -84,24 +84,3 @@ If not int the compress list, add the record to the list.
   ]
 }
 ```
-
-#### utils/enums.py
-
-Supporting classses to define Statuses and Key values
-
-#### utils/execption_handler.py
-
-- **SQSMessageDuplicateError**:
-  Raised when the Message was already processed.
-  In general, this error is only raised using the Batch processing functionality into the SQS > Lambda integration.
-
-  ##### Edit Batch size:
-
-  To enable or change the processing from single messages to Batch go to the Lambda function related to the step0 execution and change the event Trigger as showed below, to a value that fit's your current requirements.
-
-![SQS_Batch_AWS](../../images/stepfunctions/sqs_lambda_batch.png)
-
-![Add_trigger_sqs](../../images/stepfunctions/add_trigger_sqs_batch.png)
-
-- **ProcessingError**:
-  Provisional Error to handle any Processing Error on this step.
