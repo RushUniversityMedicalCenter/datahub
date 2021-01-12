@@ -1,8 +1,12 @@
-## FHIR convertion and persist to HealthLake
+# FHIR convertion and persist to HealthLake
 
 Lambdas responsible for the FHIR Pipeline
 
-All lambdas are executed using a step machine, defined below:
+#### Step Functions
+
+AWS Step Functions lets you add resilient workflow automation to your applications in minutes—without writing code. Workflows built with Step Functions include built-in error handling, parameter passing, recommended security settings, and state management, reducing the amount of code you have to write and maintain.
+
+All functions for the FHIR Pipeline are executed using a step machine defined using [Step Functions](https://aws.amazon.com/step-functions/getting-started/).
 
 ![FullSFN](../../images/stepfunctions/full_sfn.png)
 
