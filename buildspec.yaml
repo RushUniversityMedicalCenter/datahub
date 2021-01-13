@@ -15,7 +15,7 @@ phases:
   pre_build:
     commands:
       - echo Validating and Assuming targetAssumeRoleArn=${targetAssumeRoleArn}
-      - ./codebuild/aws_assume_role.sh ${targetAssumeRoleArn}
+      - . ./codebuild/aws_assume_role.sh ${targetAssumeRoleArn}
       - aws sts get-caller-identity
       - echo
       - echo Installing source NPM dependencies...
