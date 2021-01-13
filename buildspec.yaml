@@ -1,17 +1,26 @@
 # Do not change version. This is the version of aws buildspec, not the version of your buldspec file.
 version: 0.2
-
 phases:
   install:
     runtime-versions:
       nodejs: 12
     commands:
+      - echo Using Environment Variables
+      - echo envName=${envName}
+      - echo vpcCidr=${vpcCidr}
+      - echo targetAssumeRoleArn=${targetAssumeRoleArn}
+      - echo
       - echo Installing CDK and required dependencies
-      - npm install -g aws-cdk
-      - npm install -g typescript
+      - chmod +x codebuild/aws_assume_role.sh
   pre_build:
     commands:
+      - echo Validating and Assuming targetAssumeRoleArn=${targetAssumeRoleArn}
+      - ./codebuild/aws_assume_role.sh ${targetAssumeRoleArn}
+      - aws sts get-caller-identity
+      - echo
       - echo Installing source NPM dependencies...
+      - npm install -g aws-cdk
+      - npm install -g typescript
       - npm install
   build:
     commands:
