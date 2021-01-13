@@ -7,6 +7,8 @@ phases:
       nodejs: 12
     commands:
       - echo Installing CDK and required dependencies
+      - npm install -g aws-cdk
+      - npm install -g typescript
   pre_build:
     commands:
       - echo Installing source NPM dependencies...
