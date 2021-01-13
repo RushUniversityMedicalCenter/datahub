@@ -6,9 +6,12 @@ phases:
       nodejs: 12
     commands:
       - echo Using Environment Variables
+      - echo "--------------------------------------"
       - echo envName=${envName}
       - echo vpcCidr=${vpcCidr}
       - echo targetAssumeRoleArn=${targetAssumeRoleArn}
+      - echo healthLakeEndpoint=${healthLakeEndpoint}
+      - echo "--------------------------------------"
       - echo
       - echo Installing CDK and required dependencies
       - chmod +x codebuild/aws_assume_role.sh

@@ -34,6 +34,13 @@ Parameters:
     Description: "
     Adminstratator priviledged role that can be assumed by the codebuild deploy role in the target account
     "
+  TargetHealthLakeEndpoint:
+    Type: String
+    Description: "
+    HealthLake is still in preview mode at the time of this automation.
+    As a pre-req you have to manually enable Healthlake in the target account and provide the endpoint url here
+    If you don't have the endpoint you can update the stack later, but step functions will run into errors.
+    "
 Resources:
   DeployDatahubCodebuild:
     Type: "AWS::CodeBuild::Project"

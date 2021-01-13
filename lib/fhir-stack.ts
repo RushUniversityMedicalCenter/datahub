@@ -18,6 +18,7 @@ import {createLambda, createLambdaWithLayer, creates3bucket} from "./helpers";
 
 export interface fhirStackProps extends StackProps {
   readonly envName: string;
+  readonly healthLakeEndpoint: string;
 }
 
 export class fhirStack extends Stack {
@@ -25,6 +26,7 @@ export class fhirStack extends Stack {
     super(app, id, props);
 
     const envName = props.envName
+    const healthLakeEndpoint = props.healthLakeEndpoint
     // VPC imports
     const privateSubnetIds = Fn.split(",", Fn.importValue(envName+"-privateSubnets"));
     const fhirConvSgId = Fn.importValue(envName+"-fhirConvSg");
@@ -258,11 +260,11 @@ export class fhirStack extends Stack {
         BUCKET_PROCESSED_FHIR_RESOURCES: s3Processed.bucket.bucketName,
         CCDS_SQSMESSAGE_TABLE_LOG: ccds_sqs_messages_log.tableName,
         FOLDER_PROCESSED_FHIR_RESOURCES: 'fhir_resources',
-        HEALTHLAKE_ENDPOINT:'https://healthlake.us-east-1.amazonaws.com/datastore/c93bb7da51d252aac7f77e831d5ca29f/r4/',
-        HEALTHLAKE_CANONICAL_URI: '/datastore/c93bb7da51d252aac7f77e831d5ca29f/r4/',
+        HEALTHLAKE_ENDPOINT: healthLakeEndpoint,
+        //HEALTHLAKE_CANONICAL_URI: '/datastore/c93bb7da51d252aac7f77e831d5ca29f/r4/',
       });
 
-    // todo parameterize healthlake endpoint.
+    // done todo parameterize healthlake endpoint.
     // done todo parameterize accesskey secretkey via secrets if role does not work
 
     const ccda_exception_handler = new createLambda(this, envName, roleLambdaProcessCCD, 'ccda_exception_handler',
