@@ -72,7 +72,7 @@ export class fhirStack extends Stack {
         new iam.ServicePrincipal("lambda.amazonaws.com")
       ),
       // Glue role name must follow the below syntax. AWSGlueServiceRole Prefix is required for Glue to work properly.
-      roleName: "AWSGlueServiceRole-"+envName
+      roleName: "AWSGlueServiceRole-"+envName+"Fhir"
     })
     roleGlueService.addManagedPolicy(iam.ManagedPolicy.fromAwsManagedPolicyName('service-role/AWSGlueServiceRole'))
 

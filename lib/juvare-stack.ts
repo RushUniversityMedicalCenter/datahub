@@ -35,7 +35,18 @@ export class juvareStack extends Stack {
       }))
 
     // glue service role
-    const roleGlueService = iam.Role.fromRoleArn(this, 'roleGlueService','arn:aws:iam::'+this.account+':role/AWSGlueServiceRole-'+envName)
+    //const roleGlueService = iam.Role.fromRoleArn(this, 'roleGlueService','arn:aws:iam::'+this.account+':role/AWSGlueServiceRole-'+envName)
+    const roleGlueService = new iam.Role(this, 'roleGlueService',{
+      assumedBy: new iam.CompositePrincipal(
+        new iam.ServicePrincipal("glue.amazonaws.com"),
+        new iam.ServicePrincipal("lambda.amazonaws.com")
+      ),
+      // Glue role name must follow the below syntax. AWSGlueServiceRole Prefix is required for Glue to work properly.
+      roleName: "AWSGlueServiceRole-"+envName+'Juvare'
+    })
+    roleGlueService.addManagedPolicy(iam.ManagedPolicy.fromAwsManagedPolicyName('service-role/AWSGlueServiceRole'))
+
+
     // KMS
 
     const kmsJuvareKey = new kms.Key(this, 'kmsJuvareKey',{
