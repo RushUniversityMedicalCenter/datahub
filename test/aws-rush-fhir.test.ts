@@ -1,6 +1,6 @@
 import { expect as expectCDK, matchTemplate, MatchStyle } from '@aws-cdk/assert';
 import * as cdk from '@aws-cdk/core';
-import * as AwsRushFhir from '../lib/ccd-stack';
+import * as AwsRushFhir from '../lib/fhir-stack';
 
 test('Empty Stack', () => {
     const app = new cdk.App();

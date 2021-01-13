@@ -16,12 +16,12 @@ import {LambdaProxyIntegration} from '@aws-cdk/aws-apigatewayv2-integrations';
 import {App, CfnOutput, Duration, Fn, Stack, StackProps} from "@aws-cdk/core";
 import {createLambda, createLambdaWithLayer, creates3bucket} from "./helpers";
 
-export interface dataStackProps extends StackProps {
+export interface fhirStackProps extends StackProps {
   readonly envName: string;
 }
 
-export class ccdStack extends Stack {
-  constructor(app: App, id: string, props: dataStackProps) {
+export class fhirStack extends Stack {
+  constructor(app: App, id: string, props: fhirStackProps) {
     super(app, id, props);
 
     const envName = props.envName
@@ -81,17 +81,20 @@ export class ccdStack extends Stack {
     //
 
     const kmsLandingKey = new kms.Key(this, 'kmsLandingKey',{
-      alias: envName+'-landing-key'
+      alias: envName+'-landing-key',
+      enableKeyRotation: true
     })
     kmsLandingKey.grantEncryptDecrypt(roleLambdaProcessCCD)
 
     const kmsProcessedKey = new kms.Key(this, 'kmsProcessedKey',{
-      alias: envName+'-processed-key'
+      alias: envName+'-processed-key',
+      enableKeyRotation: true
     })
     kmsProcessedKey.grantEncryptDecrypt(roleLambdaProcessCCD)
 
     const kmsDatabaseKey = new kms.Key(this, 'kmsDatabaseKey',{
-      alias: envName+'-database-key'
+      alias: envName+'-database-key',
+      enableKeyRotation: true
     })
     kmsDatabaseKey.grantEncryptDecrypt(roleLambdaProcessCCD)
 

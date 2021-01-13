@@ -1,0 +1,75 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >
+  Creates a CodeBuild project to deploy datahub resources in the target account
+
+Parameters:
+  EnvironmentIdentifier:
+    Type: String
+    MaxLength: 5
+    AllowedPattern: ^[a-zA-Z0-9]*$
+    Description: "
+    Short Unique Alphanumeric Environment Identifier per each account.
+    examples - dev,dev01,stg,stg01,prd,prd01 etc.
+    "
+  VpcCidr:
+    Type: String
+    Description: "
+    Unique VPC CIDR range to be used by the deployment. Minimum /22 used by the deployment
+    example - 10.208.0.0/22
+    "
+  CodeBuildRoleArn:
+    Type: String
+    Default: "arn:aws:iam::074115082420:role/rush-datahub-codebuild-role"
+    Description: "
+    IAM Role to be used by codebuild - Role should have assume role priv in the target account.
+    Default should work in most cases. Refer Documentation for more details to provide access  to this role.
+    "
+  TargetAccountId:
+    Type: String
+    Description: "
+    Target Account ID to deploy datahub
+    "
+  TargetAssumeRoleArn:
+    Type: String
+    Description: "
+    Adminstratator priviledged role that can be assumed by the codebuild deploy role in the target account
+    "
+Resources:
+  DeployDatahubCodebuild:
+    Type: "AWS::CodeBuild::Project"
+    Properties:
+      Name: !Sub '${EnvironmentIdentifier}-datahub-${TargetAccountId}'
+      TimeoutInMinutes: 60
+      Artifacts:
+        Type: "NO_ARTIFACTS"
+      Cache:
+        Type: "NO_CACHE"
+      Environment:
+        ComputeType: "BUILD_GENERAL1_SMALL"
+        Image: "aws/codebuild/amazonlinux2-x86_64-standard:3.0"
+        Type: "LINUX_CONTAINER"
+        PrivilegedMode: false
+        ImagePullCredentialsType: "CODEBUILD"
+        EnvironmentVariables:
+          -
+            Name: "envName"
+            Value: !Ref EnvironmentIdentifier
+            Type: "PLAINTEXT"
+          -
+            Name: "vpcCidr"
+            Value: !Ref VpcCidr
+            Type: "PLAINTEXT"
+          -
+            Name: "targetAssumeRoleArn"
+            Value: !Ref TargetAssumeRoleArn
+            Type: "PLAINTEXT"
+      ServiceRole: !Ref CodeBuildRoleArn
+      Source:
+        Type: "CODECOMMIT"
+        BuildSpec: "buildspec.yaml"
+        GitCloneDepth: 1
+        InsecureSsl: false
+        Location: "https://git-codecommit.us-east-1.amazonaws.com/v1/repos/datahub"
+        GitSubmodulesConfig:
+          FetchSubmodules: false
+

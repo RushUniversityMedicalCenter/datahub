@@ -39,7 +39,8 @@ export class juvareStack extends Stack {
     // KMS
 
     const kmsJuvareKey = new kms.Key(this, 'kmsJuvareKey',{
-      alias: envName+'-juvare-key'
+      alias: envName+'-juvare-key',
+      enableKeyRotation: true
     })
     kmsJuvareKey.grantEncryptDecrypt(roleLambdaProcessJuvare)
 

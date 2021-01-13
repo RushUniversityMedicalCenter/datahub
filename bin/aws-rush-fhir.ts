@@ -2,7 +2,7 @@
 import 'source-map-support/register';
 import {infraStack} from '../lib/infra-stack';
 import {App} from "@aws-cdk/core";
-import {ccdStack} from "../lib/ccd-stack";
+import {fhirStack} from "../lib/fhir-stack";
 import {fhirConvStack} from "../lib/fhir-conv-stack";
 import {juvareStack} from "../lib/juvare-stack";
 
@@ -11,12 +11,12 @@ const app = new App();
 const envName = app.node.tryGetContext('envName') || process.env.envName || 'dev'
 const vpcCidr = app.node.tryGetContext('vpcCidr') || process.env.vpcCidr || '10.0.0.0/16'
 
-const InfraStack = new infraStack(app, envName+'InfraStack',{
+const InfraStack = new infraStack(app, envName+'Infra',{
   envName: envName,
   vpcCidr: vpcCidr,
 });
 
-const DataStack = new ccdStack (app, envName+'DataStack',{
+const FhirStack = new fhirStack(app, envName+'Fhir',{
   envName: envName,
 });
 
