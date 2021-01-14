@@ -17,25 +17,20 @@ const InfraStack = new infraStack(app, envName+'Infra',{
   vpcCidr: vpcCidr,
 });
 
-const FhirStack = new fhirStack(app, envName+'Fhir',{
-  envName: envName,
-  healthLakeEndpoint: healthLakeEndpoint,
-});
-FhirStack.addDependency(InfraStack,'DeployAfterInfra')
-
 const FhirConv =  new fhirConvStack(app, envName+'FhirConv',{
   envName: envName,
 });
 FhirConv.addDependency(InfraStack,'DeployAfterInfra');
 
+const FhirStack = new fhirStack(app, envName+'Fhir',{
+  envName: envName,
+  healthLakeEndpoint: healthLakeEndpoint,
+});
+FhirStack.addDependency(InfraStack,'DeployAfterInfra')
+FhirStack.addDependency(FhirConv,'DeployAfterFhirConv')  // fhir stack needs fhir conv url
+
 const JuvareStack =  new juvareStack(app, envName+'Juvare',{
   envName: envName,
 });
 
-// const AppStack = new appStack(app, envName+'AppStack',{
-//   envName: envName,
-// });
-// AppStack.addDependency(InfraStack,'DeployAfterInfra')
-// AppStack.addDependency(DataStack,'DeployAfterDataStack')
-// AppStack.addDependency(FhirConv,'DeployAfterFhirConv')
 
