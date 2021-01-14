@@ -13,7 +13,7 @@ import tasks = require('@aws-cdk/aws-stepfunctions-tasks');
 import api = require('@aws-cdk/aws-apigatewayv2');
 import {SqsEventSource} from '@aws-cdk/aws-lambda-event-sources';
 import {LambdaProxyIntegration} from '@aws-cdk/aws-apigatewayv2-integrations';
-import {App, CfnOutput, Duration, Fn, Stack, StackProps} from "@aws-cdk/core";
+import {App, CfnOutput, Duration, Fn, RemovalPolicy, Stack, StackProps} from "@aws-cdk/core";
 import {createLambda, createLambdaWithLayer, creates3bucket} from "./helpers";
 
 export interface fhirStackProps extends StackProps {
@@ -129,6 +129,7 @@ export class fhirStack extends Stack {
       encryption: dynamodb.TableEncryption.CUSTOMER_MANAGED,
       encryptionKey: kmsDatabaseKey,
       partitionKey: {name: 'ccd_hash', type: dynamodb.AttributeType.STRING},
+      removalPolicy: RemovalPolicy.SNAPSHOT,
     })
     ccds_hash_table_log.grantFullAccess(roleLambdaProcessCCD)
 
@@ -138,6 +139,7 @@ export class fhirStack extends Stack {
       encryption: dynamodb.TableEncryption.CUSTOMER_MANAGED,
       encryptionKey: kmsDatabaseKey,
       partitionKey: {name: 'id', type: dynamodb.AttributeType.STRING},
+      removalPolicy: RemovalPolicy.SNAPSHOT,
     })
     ccds_sqs_messages_log.grantFullAccess(roleLambdaProcessCCD)
 
@@ -156,6 +158,7 @@ export class fhirStack extends Stack {
       encryption: dynamodb.TableEncryption.CUSTOMER_MANAGED,
       encryptionKey: kmsDatabaseKey,
       partitionKey: {name: 'id', type: dynamodb.AttributeType.STRING},
+      removalPolicy: RemovalPolicy.SNAPSHOT,
     })
     ccds_sfn_exceptions_log.grantFullAccess(roleLambdaProcessCCD)
 

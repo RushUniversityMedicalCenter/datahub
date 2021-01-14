@@ -7,7 +7,7 @@ import dynamodb = require('@aws-cdk/aws-dynamodb');
 import glue = require('@aws-cdk/aws-glue');
 import sns = require('@aws-cdk/aws-sns');
 import lambda = require('@aws-cdk/aws-lambda');
-import {App, CfnOutput, Duration, Fn, Stack, StackProps} from "@aws-cdk/core";
+import {App, CfnOutput, Duration, Fn, RemovalPolicy, Stack, StackProps} from "@aws-cdk/core";
 import {createLambda, createLambdaWithLayer, creates3bucket} from "./helpers";
 
 export interface juvareStackProps extends StackProps {
@@ -98,6 +98,7 @@ export class juvareStack extends Stack {
       encryption: dynamodb.TableEncryption.CUSTOMER_MANAGED,
       encryptionKey: kmsJuvareKey,
       partitionKey: {name: 'md5Digest', type: dynamodb.AttributeType.STRING},
+      removalPolicy: RemovalPolicy.SNAPSHOT,
     })
     juvare_hash_table_log.grantFullAccess(roleLambdaProcessJuvare)
 
@@ -107,6 +108,7 @@ export class juvareStack extends Stack {
       encryption: dynamodb.TableEncryption.CUSTOMER_MANAGED,
       encryptionKey: kmsJuvareKey,
       partitionKey: {name: 'lambdaId', type: dynamodb.AttributeType.STRING},
+      removalPolicy: RemovalPolicy.SNAPSHOT,
     })
     juvare_execution_log.grantFullAccess(roleLambdaProcessJuvare)
 
