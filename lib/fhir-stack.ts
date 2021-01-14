@@ -129,7 +129,7 @@ export class fhirStack extends Stack {
       encryption: dynamodb.TableEncryption.CUSTOMER_MANAGED,
       encryptionKey: kmsDatabaseKey,
       partitionKey: {name: 'ccd_hash', type: dynamodb.AttributeType.STRING},
-      removalPolicy: RemovalPolicy.SNAPSHOT,
+      removalPolicy: RemovalPolicy.DESTROY,
     })
     ccds_hash_table_log.grantFullAccess(roleLambdaProcessCCD)
 
@@ -139,7 +139,7 @@ export class fhirStack extends Stack {
       encryption: dynamodb.TableEncryption.CUSTOMER_MANAGED,
       encryptionKey: kmsDatabaseKey,
       partitionKey: {name: 'id', type: dynamodb.AttributeType.STRING},
-      removalPolicy: RemovalPolicy.SNAPSHOT,
+      removalPolicy: RemovalPolicy.DESTROY,
     })
     ccds_sqs_messages_log.grantFullAccess(roleLambdaProcessCCD)
 
@@ -158,7 +158,7 @@ export class fhirStack extends Stack {
       encryption: dynamodb.TableEncryption.CUSTOMER_MANAGED,
       encryptionKey: kmsDatabaseKey,
       partitionKey: {name: 'id', type: dynamodb.AttributeType.STRING},
-      removalPolicy: RemovalPolicy.SNAPSHOT,
+      removalPolicy: RemovalPolicy.DESTROY,
     })
     ccds_sfn_exceptions_log.grantFullAccess(roleLambdaProcessCCD)
 

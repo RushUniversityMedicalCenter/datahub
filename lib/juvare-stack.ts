@@ -98,7 +98,7 @@ export class juvareStack extends Stack {
       encryption: dynamodb.TableEncryption.CUSTOMER_MANAGED,
       encryptionKey: kmsJuvareKey,
       partitionKey: {name: 'md5Digest', type: dynamodb.AttributeType.STRING},
-      removalPolicy: RemovalPolicy.SNAPSHOT,
+      removalPolicy: RemovalPolicy.DESTROY,
     })
     juvare_hash_table_log.grantFullAccess(roleLambdaProcessJuvare)
 
@@ -108,7 +108,7 @@ export class juvareStack extends Stack {
       encryption: dynamodb.TableEncryption.CUSTOMER_MANAGED,
       encryptionKey: kmsJuvareKey,
       partitionKey: {name: 'lambdaId', type: dynamodb.AttributeType.STRING},
-      removalPolicy: RemovalPolicy.SNAPSHOT,
+      removalPolicy: RemovalPolicy.DESTROY,
     })
     juvare_execution_log.grantFullAccess(roleLambdaProcessJuvare)
 
