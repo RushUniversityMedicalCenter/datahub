@@ -342,7 +342,7 @@ export class fhirStack extends Stack {
         resultPath: '$.error',
         errors:['HealthLakePostTooManyRequestsError']
       })
-      .addCatch(exceptionHandler,{errors: ['States.All']})
+      .addCatch(exceptionHandler,{errors: ['States.All',"HealthLakePostError"]})
 
     const ProcessSQSMessage = new tasks.LambdaInvoke(this, 'ProcessSQSMessage', {
       lambdaFunction: ccda_step1_new_files.lambdaFunction,
