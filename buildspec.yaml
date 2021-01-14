@@ -11,6 +11,7 @@ phases:
       - echo vpcCidr=${vpcCidr}
       - echo targetAssumeRoleArn=${targetAssumeRoleArn}
       - echo healthLakeEndpoint=${healthLakeEndpoint}
+      - echo cdkAction=${cdkAction}
       - echo "--------------------------------------"
       - echo
       - echo Installing CDK and required dependencies
@@ -33,7 +34,7 @@ phases:
   post_build:
     commands:
       - echo Build completed on `date`
-      - cdk deploy --all --require-approval never
+      - cdk ${cdkAction} --all --require-approval never
 # Include only the files required for your application to run.
 # Do not use recursively include artifacts from node_modules directory as it will include unnecessary packages
 # used only for building and testing.

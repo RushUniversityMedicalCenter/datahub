@@ -41,6 +41,13 @@ Parameters:
     As a pre-req you have to manually enable Healthlake in the target account and provide the endpoint url here
     If you don't have the endpoint you can update the stack later, but step functions will run into errors.
     "
+  CdkAction:
+    Type: String
+    Default: "deploy"
+    AllowedValues: ["deploy","destroy"]
+    Description: "
+    cdk action to perform. Allowed values: deploy, destroy. deploy also updates existing env for any code updates
+    "
 Resources:
   DeployDatahubCodebuild:
     Type: "AWS::CodeBuild::Project"
@@ -70,6 +77,15 @@ Resources:
             Name: "targetAssumeRoleArn"
             Value: !Ref TargetAssumeRoleArn
             Type: "PLAINTEXT"
+          -
+            Name: "healthLakeEndpoint"
+            Value: !Ref TargetHealthLakeEndpoint
+            Type: "PLAINTEXT"
+          -
+            Name: "cdkAction"
+            Value: "deploy"
+            Type: "PLAINTEXT"
+      # Modify cdkAction to destroy in codebuild environment variables directly, if you want to destroy the stack at any time
       ServiceRole: !Ref CodeBuildRoleArn
       Source:
         Type: "CODECOMMIT"
