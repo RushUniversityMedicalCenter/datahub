@@ -174,6 +174,7 @@ export class fhirStack extends Stack {
         maxReceiveCount: 10,
         queue: ccdDeadLetterQueue
       },
+      visibilityTimeout: Duration.seconds(300), // must be greater than or equal to step0 lambda timeout
     })
 
     //
