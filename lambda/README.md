@@ -8,7 +8,7 @@ AWS Step Functions lets you add resilient workflow automation to your applicatio
 
 All functions for the FHIR Pipeline are executed using a step machine defined using [Step Functions](https://aws.amazon.com/step-functions/getting-started/).
 
-![FullSFN](../../images/stepfunctions/full_sfn.png)
+![FullSFN](../images/stepfunctions/full_sfn.png)
 
 Bellow is each step definition and documentation.
 

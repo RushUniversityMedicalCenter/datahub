@@ -14,7 +14,7 @@ export class creates3bucket {
       encryptionKey: this.kmsKey,
       blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
       versioned: true,
-      removalPolicy: RemovalPolicy.DESTROY,
+      removalPolicy: RemovalPolicy.RETAIN, // otherwise it will fail deleting stack if bucket is not empty
       lifecycleRules: [
         {
           transitions: [

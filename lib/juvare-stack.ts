@@ -7,8 +7,8 @@ import dynamodb = require('@aws-cdk/aws-dynamodb');
 import glue = require('@aws-cdk/aws-glue');
 import sns = require('@aws-cdk/aws-sns');
 import lambda = require('@aws-cdk/aws-lambda');
-import {App, CfnOutput, Duration, Fn, RemovalPolicy, Stack, StackProps} from "@aws-cdk/core";
-import {createLambda, createLambdaWithLayer, creates3bucket} from "./helpers";
+import {App, CfnOutput, Duration, RemovalPolicy, Stack, StackProps} from "@aws-cdk/core";
+import {createLambdaWithLayer, creates3bucket} from "./helpers";
 
 export interface juvareStackProps extends StackProps {
   readonly envName: string;
@@ -76,6 +76,7 @@ export class juvareStack extends Stack {
     const s3AthenaQueries = new s3.Bucket(this, 'athena-queries',{
       encryption: s3.BucketEncryption.S3_MANAGED,
       blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
+      removalPolicy: RemovalPolicy.RETAIN,
       versioned: true,
       lifecycleRules: [
         {

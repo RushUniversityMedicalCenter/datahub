@@ -34,7 +34,7 @@ phases:
   post_build:
     commands:
       - echo Build completed on `date`
-      - cdk ${cdkAction} --all --require-approval never
+      - cdk ${cdkAction} --all --require-approval never --force
 # Include only the files required for your application to run.
 # Do not use recursively include artifacts from node_modules directory as it will include unnecessary packages
 # used only for building and testing.
