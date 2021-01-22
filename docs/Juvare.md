@@ -1,4 +1,4 @@
-# Juvare - Bed Capacity Setup
+# Bed Capacity Setup
 
 - [Juvare - Bed Capacity Setup](#juvare---bed-capacity-setup)
   - [Architecture](#architecture)
@@ -23,7 +23,7 @@
 
 ## Architecture
 
-Juvare dataflow architecture:
+Bed Capacity dataflow architecture:
 
 ![Juvare Architecture](../images/juvare/juvare-architecture.png)
 
