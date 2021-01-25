@@ -1,0 +1,71 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Parameters:
+  CentralToolsAccountId:
+    Description: "Central Tools Account where the Codepipeline is getting triggered"
+    Type: String
+    Default: "074115082420"
+  CentrailArtifactsBucket:
+    Description: "Central Tools Artifacts Bucket for Artifacts bucket"
+    Type: String
+    Default: "rush-datahub-codebuild-artifacts"
+#  CentralArtifactKmsKeyArn:
+#    Description: "Central Tools Artifacts Bucket for Artifacts bucket"
+#    Type: String
+#    Default: "arn:aws:kms:us-east-1:074115082420:key/e0818419-86c7-4dfa-8b7c-cf93606572d2"
+Description: "Deploy IAM roles in Target Accounts"
+Resources:
+  RushDataHubDeploymentRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      RoleName: "RushDataHubDeploymentRole"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          -
+            Effect: "Allow"
+            Principal:
+              Service: "cloudformation.amazonaws.com"
+            Action: "sts:AssumeRole"
+          -
+            Effect: "Allow"
+            Principal:
+              AWS: !Sub arn:aws:iam::${CentralToolsAccountId}:root
+            Action: "sts:AssumeRole"
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AdministratorAccess
+  RushDataHubArtifactReadAccess:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: RushDataHubArtifactReadAccess
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action:
+              - 'cloudformation:*'
+              - 'iam:PassRole'
+            Resource: '*'
+          - Effect: Allow
+            Action:
+              - 's3:Get*'
+              - 's3:Put*'
+              - 's3:ListBucket*'
+            Resource:
+              - !Sub arn:aws:s3:::${CentrailArtifactsBucket}
+              - !Sub arn:aws:s3:::${CentrailArtifactsBucket}/*
+#          - Effect: Allow
+#            Action:
+#              - 'kms:DescribeKey'
+#              - 'kms:GenerateDataKey'
+#              - 'kms:Encrypt'
+#              - 'kms:ReEncrypt*'
+#              - 'kms:Decrypt'
+#            Resource:
+#              - !Ref CentralArtifactKmsKeyArn
+      Roles:
+        - !Ref RushDataHubDeploymentRole
+Outputs:
+  RushDataHubDeploymentRole:
+    Description: RushDataHubDeploymentRole
+    Value: !GetAtt RushDataHubDeploymentRole.Arn
+

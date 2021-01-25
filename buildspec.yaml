@@ -1,0 +1,43 @@
+# Do not change version. This is the version of aws buildspec, not the version of your buldspec file.
+version: 0.2
+phases:
+  install:
+    runtime-versions:
+      nodejs: 12
+    commands:
+      - echo Using Environment Variables
+      - echo "--------------------------------------"
+      - echo envName=${envName}
+      - echo vpcCidr=${vpcCidr}
+      - echo targetAssumeRoleArn=${targetAssumeRoleArn}
+      - echo healthLakeEndpoint=${healthLakeEndpoint}
+      - echo cdkAction=${cdkAction}
+      - echo "--------------------------------------"
+      - echo
+      - echo Installing CDK and required dependencies
+      - chmod +x codebuild/aws_assume_role.sh
+  pre_build:
+    commands:
+      - echo Validating and Assuming targetAssumeRoleArn=${targetAssumeRoleArn}
+      - . ./codebuild/aws_assume_role.sh ${targetAssumeRoleArn}
+      - aws sts get-caller-identity
+      - echo
+      - echo Installing source NPM dependencies...
+      - npm install -g aws-cdk
+      - npm install -g typescript
+      - npm install
+  build:
+    commands:
+      - echo Build started on `date`
+      - cdk bootstrap
+      - cdk synth
+  post_build:
+    commands:
+      - echo Build completed on `date`
+      - cdk ${cdkAction} --all --require-approval never --force
+# Include only the files required for your application to run.
+# Do not use recursively include artifacts from node_modules directory as it will include unnecessary packages
+# used only for building and testing.
+# ExpressJS apps will need other artifact directories included (bin/*, public/*, routes/*, views/* etc).
+#artifacts:
+#  files:
