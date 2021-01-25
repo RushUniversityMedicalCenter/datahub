@@ -14,7 +14,7 @@ export interface juvareStackProps extends StackProps {
   readonly envName: string;
 }
 
-export class juvareStack extends Stack {
+export class bedcapStack extends Stack {
   constructor(app: App, id: string, props: juvareStackProps) {
     super(app, id, props);
 
@@ -50,7 +50,7 @@ export class juvareStack extends Stack {
     // KMS
 
     const kmsJuvareKey = new kms.Key(this, 'kmsJuvareKey',{
-      alias: envName+'-juvare-key',
+      alias: envName+'-bedcap-key',
       enableKeyRotation: true
     })
     kmsJuvareKey.grantEncryptDecrypt(roleLambdaProcessJuvare)
@@ -58,7 +58,7 @@ export class juvareStack extends Stack {
     // S3 Buckets
 
 
-    const s3LandingJuvare = new creates3bucket(this, 'landing-juvare', kmsJuvareKey)
+    const s3LandingJuvare = new creates3bucket(this, 'landing-bedcap', kmsJuvareKey)
     s3LandingJuvare.bucket.grantReadWrite(roleLambdaProcessJuvare)
 
     // Create folder structure in Juvare Landing bucket
@@ -68,7 +68,7 @@ export class juvareStack extends Stack {
       //destinationKeyPrefix: '',
     })
 
-    const s3ProcessedJuvare = new creates3bucket(this, 'processed-juvare', kmsJuvareKey)
+    const s3ProcessedJuvare = new creates3bucket(this, 'processed-bedcap', kmsJuvareKey)
     s3ProcessedJuvare.bucket.grantReadWrite(roleLambdaProcessJuvare)
     s3ProcessedJuvare.bucket.grantReadWrite(roleGlueService)
 
@@ -93,25 +93,25 @@ export class juvareStack extends Stack {
 
 
     // dynamodb
-    const juvare_hash_table_log = new dynamodb.Table(this, 'juvare_hash_table_log', {
-      tableName: envName+'-juvare_hash_table_log',
+    const bedcap_hash_table_log = new dynamodb.Table(this, 'bedcap_hash_table_log', {
+      tableName: envName+'-bedcap_hash_table_log',
       billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
       encryption: dynamodb.TableEncryption.CUSTOMER_MANAGED,
       encryptionKey: kmsJuvareKey,
       partitionKey: {name: 'md5Digest', type: dynamodb.AttributeType.STRING},
       removalPolicy: RemovalPolicy.DESTROY,
     })
-    juvare_hash_table_log.grantFullAccess(roleLambdaProcessJuvare)
+    bedcap_hash_table_log.grantFullAccess(roleLambdaProcessJuvare)
 
-    const juvare_execution_log = new dynamodb.Table(this, 'juvare_execution_log', {
-      tableName: envName+'-juvare_execution_log',
+    const bedcap_execution_log = new dynamodb.Table(this, 'bedcap_execution_log', {
+      tableName: envName+'-bedcap_execution_log',
       billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
       encryption: dynamodb.TableEncryption.CUSTOMER_MANAGED,
       encryptionKey: kmsJuvareKey,
       partitionKey: {name: 'lambdaId', type: dynamodb.AttributeType.STRING},
       removalPolicy: RemovalPolicy.DESTROY,
     })
-    juvare_execution_log.grantFullAccess(roleLambdaProcessJuvare)
+    bedcap_execution_log.grantFullAccess(roleLambdaProcessJuvare)
 
 
     //
@@ -126,8 +126,8 @@ export class juvareStack extends Stack {
     // Glue
     //
 
-    const glueDbJuvare = new glue.Database(this, envName+'juvare', {
-      databaseName: envName+'-juvare'
+    const glueDbJuvare = new glue.Database(this, envName+'bedcap', {
+      databaseName: envName+'-bedcap'
     })
 
 
@@ -142,8 +142,8 @@ export class juvareStack extends Stack {
         s3Targets: [{
           path: 's3://'+s3ProcessedJuvare.bucket.bucketName+'/juvare/cdph_idph/'
         }]
-        }
-      })
+      }
+    })
 
     const JuvareDailyHaveBedCrawler = new glue.CfnCrawler(this, 'JuvareDailyHaveBedCrawler',{
       name: envName+'JuvareDailyHaveBedCrawler',
@@ -167,26 +167,26 @@ export class juvareStack extends Stack {
 
     // lambda
 
-    const juvare_cdph_idph_process = new createLambdaWithLayer(this, envName, roleLambdaProcessJuvare, 'juvare_cdph_idph_process',layerXlrd,
+    const bedcap_cdph_idph_process = new createLambdaWithLayer(this, envName, roleLambdaProcessJuvare, 'bedcap_cdph_idph_process',layerXlrd,
       {
         BUCKET_PROCESSED_JUVARE: s3ProcessedJuvare.bucket.bucketName,
         BUCKET_PROCESSED_JUVARE_FOLDER: 'cdph_idph',
         BUCKET_RAW_JUVARE_FOLDER: 'raw_cdph_idph',
-        DYNAMODB_JUVARE_EXECUTION_LOG: juvare_execution_log.tableName,
-        DYNAMODB_JUVARE_HASH_TABLE_LOG: juvare_hash_table_log.tableName,
+        DYNAMODB_JUVARE_EXECUTION_LOG: bedcap_execution_log.tableName,
+        DYNAMODB_JUVARE_HASH_TABLE_LOG: bedcap_hash_table_log.tableName,
         GLUE_CRAWLER_JUVARE_CDPH_IDPH: envName+'JuvareDailyCDPHIDPHCrawler',
         SNS_TOPIC_ARN: JuvareProcessingTopic.topicArn
       });
 
     // todo add crawler, glue db
 
-    const juvare_have_bed_process = new createLambdaWithLayer(this, envName, roleLambdaProcessJuvare, 'juvare_have_bed_process',layerXlrd,
+    const bedcap_have_bed_process = new createLambdaWithLayer(this, envName, roleLambdaProcessJuvare, 'bedcap_have_bed_process',layerXlrd,
       {
         BUCKET_PROCESSED_JUVARE: s3ProcessedJuvare.bucket.bucketName,
         BUCKET_PROCESSED_JUVARE_FOLDER: 'daily_havbed',
         BUCKET_RAW_JUVARE_FOLDER: 'raw_daily_havbed',
-        DYNAMODB_JUVARE_EXECUTION_LOG: juvare_execution_log.tableName,
-        DYNAMODB_JUVARE_HASH_TABLE_LOG: juvare_hash_table_log.tableName,
+        DYNAMODB_JUVARE_EXECUTION_LOG: bedcap_execution_log.tableName,
+        DYNAMODB_JUVARE_HASH_TABLE_LOG: bedcap_hash_table_log.tableName,
         GLUE_CRAWLER_JUVARE_HAVE_BED: envName+'JuvareDailyHaveBedCrawler',
         SNS_TOPIC_ARN: JuvareProcessingTopic.topicArn
       });
@@ -194,13 +194,13 @@ export class juvareStack extends Stack {
     // S3 Triggers/Notifications
 
     s3LandingJuvare.bucket.addEventNotification(s3.EventType.OBJECT_CREATED,
-      new s3n.LambdaDestination(juvare_cdph_idph_process.lambdaFunction),
+      new s3n.LambdaDestination(bedcap_cdph_idph_process.lambdaFunction),
       {
         prefix: 'cdph_idph/'
-    })
+      })
 
     s3LandingJuvare.bucket.addEventNotification(s3.EventType.OBJECT_CREATED,
-      new s3n.LambdaDestination(juvare_have_bed_process.lambdaFunction),
+      new s3n.LambdaDestination(bedcap_have_bed_process.lambdaFunction),
       {
         prefix: 'daily_havbed/'
       })
