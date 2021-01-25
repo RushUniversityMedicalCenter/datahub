@@ -4,7 +4,7 @@ import {infraStack} from '../lib/infra-stack';
 import {App} from "@aws-cdk/core";
 import {fhirStack} from "../lib/fhir-stack";
 import {fhirConvStack} from "../lib/fhir-conv-stack";
-import {juvareStack} from "../lib/juvare-stack";
+import {bedcapStack} from "../lib/bedcap-stack";
 
 
 const app = new App();
@@ -29,7 +29,7 @@ const FhirStack = new fhirStack(app, envName+'Fhir',{
 FhirStack.addDependency(InfraStack,'DeployAfterInfra')
 FhirStack.addDependency(FhirConv,'DeployAfterFhirConv')  // fhir stack needs fhir conv url
 
-const JuvareStack =  new juvareStack(app, envName+'Juvare',{
+const BedCapStack =  new bedcapStack(app, envName+'BedCap',{
   envName: envName,
 });
 
