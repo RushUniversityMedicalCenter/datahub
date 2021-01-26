@@ -46,6 +46,10 @@ Parameters:
     Type: String
     Default: "https://github.com/RushUniversityMedicalCenter/datahub.git"
     Description: "Source repo for the complete cdk deployment code. Assumes Github connection already exists. If not please create a dummy project with connection to a github repo with personal access token first"
+  ArtifactsBucket:
+    Type: String
+    Default: "rush-datahub-codebuild-artifacts"
+    Description: "Bucket used to store temporary archtifacts. Bucket should allow read/write access from the target accounts"
   CdkAction:
     Type: String
     Default: "deploy"
@@ -92,7 +96,7 @@ Resources:
             Type: "PLAINTEXT"
           -
             Name: "ArtifactsBucket"
-            Value: "rush-datahub-codebuild-artifacts"
+            Value: !Ref ArtifactsBucket
             Type: "PLAINTEXT"
 
       # Modify cdkAction to destroy in codebuild environment variables directly, if you want to destroy the stack at any time
