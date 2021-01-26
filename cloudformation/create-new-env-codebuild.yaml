@@ -42,6 +42,10 @@ Parameters:
     As a pre-req you have to manually enable Healthlake in the target account and provide the endpoint url here
     If you don't have the endpoint you can update the stack later, but step functions will run into errors.
     "
+  SourceGitRepo:
+    Type: String
+    Default: "https://github.com/RushUniversityMedicalCenter/datahub.git"
+    Description: "Source repo for the complete cdk deployment code. Assumes Github connection already exists. If not please create a dummy project with connection to a github repo with personal access token first"
   CdkAction:
     Type: String
     Default: "deploy"
@@ -86,14 +90,19 @@ Resources:
             Name: "cdkAction"
             Value: "deploy"
             Type: "PLAINTEXT"
+          -
+            Name: "ArtifactsBucket"
+            Value: "rush-datahub-codebuild-artifacts"
+            Type: "PLAINTEXT"
+
       # Modify cdkAction to destroy in codebuild environment variables directly, if you want to destroy the stack at any time
       ServiceRole: !Ref CodeBuildRoleArn
       Source:
-        Type: "CODECOMMIT"
+        Type: "GITHUB"
         BuildSpec: "buildspec.yaml"
         GitCloneDepth: 1
         InsecureSsl: false
-        Location: "https://git-codecommit.us-east-1.amazonaws.com/v1/repos/datahub"
+        Location: !Ref SourceGitRepo
         GitSubmodulesConfig:
           FetchSubmodules: false
 

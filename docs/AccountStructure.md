@@ -30,7 +30,7 @@ AWS Control Tower has the following features:
 | 027869397375 | aws-rush-audit@rush.edu | Audit  | Audit account – This account is for your team of users that need access to the audit information made available by AWS Control Tower. You can also use this account as the access point for third-party tools that will perform programmatic auditing of your environment to help you audit for compliance purposes  |
 | 074115082420 | aws-rush-tools@rush.edu | ToolsAccount  | Central account used to deploy the FHIR, Juvare stacks into target account via CodeBuild. This account can be used by Rush to further deploy any DevOps Tools in the future  |
 | 095405523388 | aws-rush-dev01@rush.edu | Dev01  | Dev account - to deploy Development instances of Healthlake, Fhir stack and Juvare stack  |
-| TBD | aws-rush-stage01@rush.edu | Stage01 | Stage account - to deploy Stage instances of Healthlake, Fhir stack and Juvare stack  |
+| 473322558963 | aws-rush-stage01@rush.edu | Stage01 | Stage account - to deploy Stage instances of Healthlake, Fhir stack and Juvare stack  |
 | TBD | aws-rush-prod01@rush.edu | Prod01 | Production account - to deploy Production instances of Healthlake, Fhir stack and Juvare stack  |
 
 
@@ -47,3 +47,15 @@ As part of this engagement ProServe team has configured Control Tower, created T
 **Detailed Guardrails reference:**  
 https://docs.aws.amazon.com/controltower/latest/userguide/guardrails.html
 https://docs.aws.amazon.com/controltower/latest/userguide/guardrails-reference.html
+
+## Security Alerts and Guardrail deviations
+
+Please subscribe to the following SNS Topics in the Audit account to get notified on Security Alerts and Guardrail deviations via Email/SMS
+
+**SNS Topics**
+
+| Name | Arn|
+|---|---|
+| aws-controltower-AggregateSecurityNotifications | arn:aws:sns:us-east-1:027869397375:aws-controltower-AggregateSecurityNotifications |
+| aws-controltower-AllConfigNotifications	|	arn:aws:sns:us-east-1:027869397375:aws-controltower-AllConfigNotifications |
+| aws-controltower-SecurityNotifications	|	arn:aws:sns:us-east-1:027869397375:aws-controltower-SecurityNotifications |

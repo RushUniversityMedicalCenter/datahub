@@ -13,6 +13,7 @@ phases:
       - echo targetAssumeRoleArn=${targetAssumeRoleArn}
       - echo healthLakeEndpoint=${healthLakeEndpoint}
       - echo cdkAction=${cdkAction}
+      - echo ArtifactsBucket=${ArtifactsBucket}
       - echo "--------------------------------------"
       - echo
       - echo Installing CDK and required dependencies
@@ -41,7 +42,7 @@ phases:
       - cdk ${cdkAction} --all --require-approval never --force
       - echo Deploying SFTP custom auth stack with an existing SAM template
       - cd sam
-      - sam ${cdkAction} --no-confirm-changeset --s3-bucket rush-datahub-codebuild-artifacts
+      - sam ${cdkAction} --no-confirm-changeset --s3-bucket ${ArtifactsBucket} --s3-prefix sam-sftp
 # Include only the files required for your application to run.
 # Do not use recursively include artifacts from node_modules directory as it will include unnecessary packages
 # used only for building and testing.
