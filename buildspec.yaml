@@ -33,7 +33,6 @@ phases:
       - cdk bootstrap
       - cdk synth
       - cd sam
-      - sam init
       - sam build
       - cd ..
   post_build:
