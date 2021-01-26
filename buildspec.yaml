@@ -34,10 +34,13 @@ phases:
       - cd sam
       - sam build
       - sam package --output-template-file packaged-template.yaml
+      - cd ..
   post_build:
     commands:
-      - echo Build completed on `date`
+      - echo Deploying / Updating CDK stacks
       - cdk ${cdkAction} --all --require-approval never --force
+      - echo Deploying SFTP custom auth stack with an existing SAM template
+      - cd sam
       - sam ${cdkAction} --template-file packaged-template.yaml
 # Include only the files required for your application to run.
 # Do not use recursively include artifacts from node_modules directory as it will include unnecessary packages
