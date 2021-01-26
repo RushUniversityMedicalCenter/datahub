@@ -1,0 +1,20 @@
+version = 0.1
+[default]
+[default.deploy]
+[default.deploy.parameters]
+stack_name = "sftp-user-authentication-stack"
+region = "us-east-1"
+confirm_changeset = true
+capabilities = "CAPABILITY_IAM"
+parameter_overrides = "CreateServer=\"false\" SecretsManagerRegion=\"\" TransferEndpointType=\"PUBLIC\" TransferSubnetIDs=\"\" TransferVPCID=\"\""
+
+[dev]
+[dev.deploy]
+[dev.deploy.parameters]
+stack_name = "sftp-user-authentication-stack"
+s3_bucket = "aws-sam-cli-managed-default-samclisourcebucket-3agilv76xv2b"
+s3_prefix = "sftp-user-authentication-stack"
+region = "us-east-1"
+confirm_changeset = true
+capabilities = "CAPABILITY_IAM"
+parameter_overrides = "CreateServer=\"true\" SecretsManagerRegion=\"\" TransferEndpointType=\"PUBLIC\" TransferSubnetIDs=\"\" TransferVPCID=\"\""

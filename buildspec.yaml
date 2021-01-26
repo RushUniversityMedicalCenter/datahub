@@ -31,10 +31,14 @@ phases:
       - echo Build started on `date`
       - cdk bootstrap
       - cdk synth
+      - cd sam
+      - sam build
+      - sam package --output-template-file packaged-template.yaml
   post_build:
     commands:
       - echo Build completed on `date`
       - cdk ${cdkAction} --all --require-approval never --force
+      - sam ${cdkAction} --template-file packaged-template.yaml
 # Include only the files required for your application to run.
 # Do not use recursively include artifacts from node_modules directory as it will include unnecessary packages
 # used only for building and testing.

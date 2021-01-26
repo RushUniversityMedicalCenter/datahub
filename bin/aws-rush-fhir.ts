@@ -33,4 +33,3 @@ const BedCapStack =  new bedcapStack(app, envName+'BedCap',{
   envName: envName,
 });
 
-
