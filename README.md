@@ -43,6 +43,11 @@ cdk synth
 cdk deploy --all 
 # with specific context variables example, not a valid healthlake endpoint
 cdk deploy -all --context envName="prd" --context vpcCidr="10.108.0.0/22" --context healthLakeEndpoint="https://healthlake.us-east-1.amazonaws.com/datastore/xxxxxxxxx/r4/"
+# Optional to deploy the sftp stack with custom auth
+cd sam
+CDK_BOOTSTRAP_BUCKET=$(aws s3 ls |grep cdktoolkit|head -1| awk '{print $NF}')
+sam build
+sam deploy --no-confirm-changeset --s3-bucket ${CDK_BOOTSTRAP_BUCKET} --s3-prefix sam-sftp
 ```
 
 To destroy the stacks

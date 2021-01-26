@@ -21,6 +21,7 @@ AWS Control Tower has the following features:
 
 ## Account Descriptions
 
+**AWS SSO Login Page to access all accounts:** https://rushedu.awsapps.com/start#/
 
 
 | AccountID | Account Email | AccountAlias  | Purpose  |
