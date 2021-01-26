@@ -41,7 +41,7 @@ phases:
       - cdk ${cdkAction} --all --require-approval never --force
       - echo Deploying SFTP custom auth stack with an existing SAM template
       - cd sam
-      - sam ${cdkAction} 
+      - sam ${cdkAction} --no-confirm-changeset
 # Include only the files required for your application to run.
 # Do not use recursively include artifacts from node_modules directory as it will include unnecessary packages
 # used only for building and testing.
