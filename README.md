@@ -6,7 +6,7 @@ The Application stack is divided into 5 different stacks and will be deployed in
 2. **FhirConvertor Stack:** Deploys fhir convertor container image on AWS ECS on Fargate with an Application Load Balancer as frontend. Dependent on (1)
 3. **Fhir Stack:** Deploys s3 buckets, kms keys, lambda jobs, step functions to process and convert ccd, hl7 files into Fhir format and push them into HealthLake. Denpendent on (1)(2)
 4. **Juvare Stack:** Deploys s3 buckets, kms keys, lambda jobs, glue crawlers to process the juvare files. Does not depend on any stack.
-5. **SFTP Stack:** Deploys sftp server with custom authentication via API Gateway and Secrets Manager. SFTP users have to be created manually in Secrets Manager as per process described below.
+5. **SFTP Stack:** Deploys sftp server with custom authentication via API Gateway and Secrets Manager. SFTP users have to be created manually in Secrets Manager as per process described below. As the requirement was to have username/password authentication for SFTP this stack uses custom authentication solution as described at https://aws.amazon.com/blogs/storage/enable-password-authentication-for-aws-transfer-for-sftp-using-aws-secrets-manager/. The stack is deployed via SAM (Serverless Application Model) template located in sam folder.
 
 ![ApplicationStack](./images/ApplicationStack.png)
 
