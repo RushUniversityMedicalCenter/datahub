@@ -15,7 +15,7 @@
 
 #!/bin/bash
 
-set -x
+#set -x
 TARGET_DEPLOYMENT_ROLE=$1
 
 CREDS=$(aws sts assume-role \

@@ -13,7 +13,6 @@ phases:
       - echo targetAssumeRoleArn=${targetAssumeRoleArn}
       - echo healthLakeEndpoint=${healthLakeEndpoint}
       - echo cdkAction=${cdkAction}
-      - echo ArtifactsBucket=${ArtifactsBucket}
       - echo "--------------------------------------"
       - echo
       - echo Installing CDK and required dependencies
@@ -32,6 +31,7 @@ phases:
     commands:
       - echo Build started on `date`
       - cdk bootstrap
+      - CDK_BOOTSTRAP_BUCKET=$(aws s3 ls |grep cdktoolkit|head -1| awk '{print $NF}')
       - cdk synth
       - cd sam
       - sam build
@@ -41,11 +41,7 @@ phases:
       - echo Deploying / Updating CDK stacks
       - cdk ${cdkAction} --all --require-approval never --force
       - echo Deploying SFTP custom auth stack with an existing SAM template
+      - echo Reusing CDK bootstrap bucket for sam temporary artifacts
       - cd sam
-      - sam ${cdkAction} --no-confirm-changeset --s3-bucket cdktoolkit-stagingbucket-1il4id1heue4v --s3-prefix sam-sftp
-# Include only the files required for your application to run.
-# Do not use recursively include artifacts from node_modules directory as it will include unnecessary packages
-# used only for building and testing.
-# ExpressJS apps will need other artifact directories included (bin/*, public/*, routes/*, views/* etc).
-#artifacts:
-#  files:
+      - sam ${cdkAction} --no-confirm-changeset --s3-bucket ${CDK_BOOTSTRAP_BUCKET} --s3-prefix sam-sftp
+
