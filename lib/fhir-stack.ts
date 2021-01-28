@@ -435,6 +435,17 @@ export class fhirStack extends Stack {
         loggingLevel: restapi.MethodLoggingLevel.INFO,
         dataTraceEnabled: true
       },
+      deploy: false  // default deployment will create a stage with name prod
+    })
+    const restDeploy = new restapi.Deployment(this, 'deployUploadCCD',{
+      api: restUploadCCD,
+    })
+    const restStage = new restapi.Stage(this, 'stageUploadCCD', {
+      deployment: restDeploy,
+      stageName: envName,
+      loggingLevel: restapi.MethodLoggingLevel.INFO,
+      metricsEnabled: true,
+      dataTraceEnabled: true
     })
     const resUploadCCD = restUploadCCD.root.addResource('uploadccd')
     resUploadCCD.addMethod('POST', new restapi.LambdaIntegration(lambdaUploadCCDApi.lambdaFunction),{
