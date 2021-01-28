@@ -46,35 +46,37 @@ export class fhirConvStack extends Stack {
       vpc: vpc,
     })
 
-    const fhirConvertor = new ecs_patterns.ApplicationLoadBalancedFargateService(this, "FhirConverter", {
-      cluster: ecsCluster, // Required
-      assignPublicIp: false,
-      cpu: 1024, // Default is 256
-      desiredCount: 2, // Default is 1
-      taskImageOptions: {
-        image: ecs.ContainerImage.fromRegistry("healthplatformregistry.azurecr.io/fhirconverter:v2.0.0"),
-        containerPort: 2019,
-        enableLogging: true,
-      },
-      memoryLimitMiB: 4096, // Default is 512
-      publicLoadBalancer: false, // Default is false
-      openListener: false,
-      protocol: alb.ApplicationProtocol.HTTPS,
-      certificate: fhirCertificate,
-      domainName: 'fhirconv.'+dummyRoute53Zone.zoneName,
-      domainZone: dummyRoute53Zone,
-    });
-
-    fhirConvertor.loadBalancer.addSecurityGroup(fhirConvSg)
+    // const fhirConvertor = new ecs_patterns.ApplicationLoadBalancedFargateService(this, "FhirConverter", {
+    //   cluster: ecsCluster, // Required
+    //   assignPublicIp: false,
+    //   cpu: 1024, // Default is 256
+    //   desiredCount: 2, // Default is 1
+    //   taskImageOptions: {
+    //     image: ecs.ContainerImage.fromRegistry("healthplatformregistry.azurecr.io/fhirconverter:v2.0.0"),
+    //     containerPort: 2019,
+    //     enableLogging: true,
+    //   },
+    //   memoryLimitMiB: 4096, // Default is 512
+    //   publicLoadBalancer: false, // Default is false
+    //   openListener: false,
+    //   protocol: alb.ApplicationProtocol.HTTPS,
+    //   certificate: fhirCertificate,
+    //   domainName: 'fhirconv.'+dummyRoute53Zone.zoneName,
+    //   domainZone: dummyRoute53Zone,
+    // });
+    //
+    // fhirConvertor.loadBalancer.addSecurityGroup(fhirConvSg)
 
     new ssm.StringParameter(this,'fhirConvertorUrl',{
-      stringValue: 'https://'+fhirConvertor.loadBalancer.loadBalancerDnsName,
+      //stringValue: 'https://'+fhirConvertor.loadBalancer.loadBalancerDnsName,
+      stringValue: "",
       parameterName: ssm_base_path+'fhirConvertorUrl'
     })
 
 
     new CfnOutput(this, 'fhirConvertorExport', {
-      value: 'http://'+fhirConvertor.loadBalancer.loadBalancerDnsName,
+      //value: 'http://'+fhirConvertor.loadBalancer.loadBalancerDnsName,
+      value: "",
       exportName: envName+'-fhir-convertor-url'
     });
 
