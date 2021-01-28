@@ -75,7 +75,7 @@ export class fhirConvStack extends Stack {
 
     new CfnOutput(this, 'fhirConvertorExport', {
       value: 'http://'+fhirConvertor.loadBalancer.loadBalancerDnsName,
-      //exportName: envName+'-fhir-convertor-url'
+      exportName: envName+'-fhir-convertor-url'
     });
 
   }
