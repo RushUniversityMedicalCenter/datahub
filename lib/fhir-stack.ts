@@ -434,13 +434,15 @@ export class fhirStack extends Stack {
       deployOptions: {
         loggingLevel: restapi.MethodLoggingLevel.INFO,
         dataTraceEnabled: true
-      }
+      },
     })
     const resUploadCCD = restUploadCCD.root.addResource('uploadccd')
     resUploadCCD.addMethod('POST', new restapi.LambdaIntegration(lambdaUploadCCDApi.lambdaFunction),{
       apiKeyRequired: true,
     })
-    const apiKey = restUploadCCD.addApiKey('Hospital-sample')
+    const apiKey = restUploadCCD.addApiKey('Hospital-sample', {
+      apiKeyName: 'Hospital-sample',
+    })
 
     const apiUsagePlan = restUploadCCD.addUsagePlan('Hospital-sample-UsagePlan', {
       name: 'Hospital-sample-UsagePlan',
@@ -449,6 +451,9 @@ export class fhirStack extends Stack {
         rateLimit: 100,
         burstLimit: 200
       }
+    })
+    apiUsagePlan.addApiStage({
+      stage: restUploadCCD.deploymentStage,
     })
 
 
