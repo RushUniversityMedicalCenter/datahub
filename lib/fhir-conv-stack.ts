@@ -1,10 +1,11 @@
 import ecs = require('@aws-cdk/aws-ecs');
 import ec2 = require('@aws-cdk/aws-ec2');
+import alb = require('@aws-cdk/aws-elasticloadbalancingv2');
+import * as route53 from '@aws-cdk/aws-route53';
+import * as acm from '@aws-cdk/aws-certificatemanager';
 import ecs_patterns = require('@aws-cdk/aws-ecs-patterns');
-import elbv2 = require('@aws-cdk/aws-elasticloadbalancingv2');
-import { AutoScalingGroup } from '@aws-cdk/aws-autoscaling';
-import {App, Stack, StackProps, CfnParameter, Fn, CfnOutput} from "@aws-cdk/core";
-import {SubnetType} from "@aws-cdk/aws-ec2";
+import ssm = require('@aws-cdk/aws-ssm')
+import {App, CfnOutput, Fn, Stack, StackProps} from "@aws-cdk/core";
 
 
 export interface fhirConvStackProps extends StackProps {
@@ -29,6 +30,16 @@ export class fhirConvStack extends Stack {
 
     const fhirConvSg = ec2.SecurityGroup.fromSecurityGroupId(this, 'fhirConvSg',fhirConvSgId);
 
+    const dummyRoute53Zone = new route53.PrivateHostedZone(this, 'dummyRoute53Zone', {
+      zoneName: envName+'.dummydomain-'+this.account+'.com',
+      vpc,
+    })
+
+    const ssm_base_path = '/'+envName+'/fhirConv/'
+
+    // create_import_acm_cert.sh will create cert and this parameter value. If running manually run the script before running cdk deploy
+    const acm_arn = ssm.StringParameter.valueForStringParameter(this, ssm_base_path+'self_signed_acm_arn')
+    const fhirCertificate = acm.Certificate.fromCertificateArn(this, 'fhirCertificate', acm_arn)
 
     const ecsCluster = new ecs.Cluster(this, 'fhir-cluster', {
       clusterName: envName+'-fhir-cluster',
@@ -47,16 +58,24 @@ export class fhirConvStack extends Stack {
       },
       memoryLimitMiB: 4096, // Default is 512
       publicLoadBalancer: false, // Default is false
-      openListener: false
-
+      openListener: false,
+      protocol: alb.ApplicationProtocol.HTTPS,
+      certificate: fhirCertificate,
+      domainName: 'fhirconv.'+dummyRoute53Zone.zoneName,
+      domainZone: dummyRoute53Zone,
     });
 
     fhirConvertor.loadBalancer.addSecurityGroup(fhirConvSg)
 
+    new ssm.StringParameter(this,'fhirConvertorUrl',{
+      stringValue: 'https://'+fhirConvertor.loadBalancer.loadBalancerDnsName,
+      parameterName: ssm_base_path+'fhirConvertorUrl'
+    })
+
 
     new CfnOutput(this, 'fhirConvertorExport', {
       value: 'http://'+fhirConvertor.loadBalancer.loadBalancerDnsName,
-      exportName: envName+'-fhir-convertor-url'
+      //exportName: envName+'-fhir-convertor-url'
     });
 
   }

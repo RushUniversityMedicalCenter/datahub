@@ -27,7 +27,7 @@ const FhirStack = new fhirStack(app, envName+'Fhir',{
   healthLakeEndpoint: healthLakeEndpoint,
 });
 FhirStack.addDependency(InfraStack,'DeployAfterInfra')
-FhirStack.addDependency(FhirConv,'DeployAfterFhirConv')  // fhir stack needs fhir conv url
+//FhirStack.addDependency(FhirConv,'DeployAfterFhirConv')  // fhir stack needs fhir conv url
 
 const BedCapStack =  new bedcapStack(app, envName+'BedCap',{
   envName: envName,

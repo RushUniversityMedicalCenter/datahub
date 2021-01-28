@@ -106,12 +106,12 @@ def convert_to_fhir(url, headers, ccd_content, event):
 
     # check if server is up
     try:
-        res_get = requests.get(os.environ["FHIR_CONVERTER_URL"])
+        res_get = requests.get(os.environ["FHIR_CONVERTER_URL"], verify=False)
         res_get.raise_for_status()
         # check if up POST
         if res_get:
             try:
-                response = requests.post(url, headers=headers, data=ccd_content)
+                response = requests.post(url, headers=headers, data=ccd_content, verify=False)
                 response.raise_for_status()
                 if response:
                     return response.text

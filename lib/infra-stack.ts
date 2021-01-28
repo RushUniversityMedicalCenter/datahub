@@ -48,6 +48,7 @@ export class infraStack extends Stack {
     })
 
     fhirConvSg.addIngressRule(ec2.Peer.ipv4(vpc.vpcCidrBlock), ec2.Port.tcp(80), 'Access to Fhir Convertor via ALB');
+    fhirConvSg.addIngressRule(ec2.Peer.ipv4(vpc.vpcCidrBlock), ec2.Port.tcp(443), 'Access to Fhir Convertor via ALB');
 
     new CfnOutput(this, 'vpcId', {
       value: vpc.vpcId.toString(),

@@ -12,6 +12,7 @@ import sfn = require('@aws-cdk/aws-stepfunctions');
 import tasks = require('@aws-cdk/aws-stepfunctions-tasks');
 import api = require('@aws-cdk/aws-apigatewayv2');
 import restapi = require('@aws-cdk/aws-apigateway');
+import ssm = require('@aws-cdk/aws-ssm')
 import {SqsEventSource} from '@aws-cdk/aws-lambda-event-sources';
 import {LambdaProxyIntegration} from '@aws-cdk/aws-apigatewayv2-integrations';
 import {App, CfnOutput, Duration, Fn, RemovalPolicy, Stack, StackProps} from "@aws-cdk/core";
@@ -28,10 +29,12 @@ export class fhirStack extends Stack {
 
     const envName = props.envName
     const healthLakeEndpoint = props.healthLakeEndpoint
+    const ssm_base_path = '/'+envName+'/fhirConv/'
     // VPC imports
     const privateSubnetIds = Fn.split(",", Fn.importValue(envName+"-privateSubnets"));
     const fhirConvSgId = Fn.importValue(envName+"-fhirConvSg");
-    const fhirConvUrl = Fn.importValue(envName+'-fhir-convertor-url')
+    //const fhirConvUrl = Fn.importValue(envName+'-fhir-convertor-url')
+    const fhirConvUrl = ssm.StringParameter.valueForStringParameter(this,ssm_base_path+'fhirConvertorUrl')
 
 
     const vpc = ec2.Vpc.fromVpcAttributes(this, "importedVpc", {
@@ -431,10 +434,6 @@ export class fhirStack extends Stack {
         allowMethods: ['POST'],
         allowOrigins: ['*'],
       },
-      deployOptions: {
-        loggingLevel: restapi.MethodLoggingLevel.INFO,
-        dataTraceEnabled: true
-      },
       deploy: false  // default deployment will create a stage with name prod
     })
     const restDeploy = new restapi.Deployment(this, 'deployUploadCCD',{
@@ -442,7 +441,7 @@ export class fhirStack extends Stack {
     })
     const restStage = new restapi.Stage(this, 'stageUploadCCD', {
       deployment: restDeploy,
-      stageName: envName,
+      stageName: 'api',
       loggingLevel: restapi.MethodLoggingLevel.INFO,
       metricsEnabled: true,
       dataTraceEnabled: true
@@ -451,6 +450,7 @@ export class fhirStack extends Stack {
     resUploadCCD.addMethod('POST', new restapi.LambdaIntegration(lambdaUploadCCDApi.lambdaFunction),{
       apiKeyRequired: true,
     })
+    restUploadCCD.deploymentStage = restStage
     const apiKey = restUploadCCD.addApiKey('Hospital-sample', {
       apiKeyName: 'Hospital-sample',
     })
@@ -464,7 +464,7 @@ export class fhirStack extends Stack {
       }
     })
     apiUsagePlan.addApiStage({
-      stage: restUploadCCD.deploymentStage,
+      stage: restStage,
     })
 
 

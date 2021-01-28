@@ -17,11 +17,14 @@ phases:
       - echo
       - echo Installing CDK and required dependencies
       - chmod +x codebuild/aws_assume_role.sh
+      - chmod +x codebuild/create_import_acm_cert.sh
   pre_build:
     commands:
       - echo Validating and Assuming targetAssumeRoleArn=${targetAssumeRoleArn}
       - . ./codebuild/aws_assume_role.sh ${targetAssumeRoleArn}
       - aws sts get-caller-identity
+      - . ./codebuild/create_import_acm_cert.sh
+      - export fhirConvSelfSignedCertArn=${SELF_SIGNED_CERT_ACM_ARN}
       - echo
       - echo Installing source NPM dependencies...
       - npm install -g aws-cdk
