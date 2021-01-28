@@ -11,6 +11,7 @@ import lambda = require('@aws-cdk/aws-lambda');
 import sfn = require('@aws-cdk/aws-stepfunctions');
 import tasks = require('@aws-cdk/aws-stepfunctions-tasks');
 import api = require('@aws-cdk/aws-apigatewayv2');
+import restapi = require('@aws-cdk/aws-apigateway');
 import {SqsEventSource} from '@aws-cdk/aws-lambda-event-sources';
 import {LambdaProxyIntegration} from '@aws-cdk/aws-apigatewayv2-integrations';
 import {App, CfnOutput, Duration, Fn, RemovalPolicy, Stack, StackProps} from "@aws-cdk/core";
@@ -422,6 +423,37 @@ export class fhirStack extends Stack {
         handler: lambdaUploadCCDApi.lambdaFunction
       })
     })
+
+    const restUploadCCD = new restapi.RestApi(this, 'restUploadCCD',{
+      restApiName: envName+'-UploadCCD',
+      defaultCorsPreflightOptions: {
+        allowHeaders: ['*'],
+        allowMethods: ['POST'],
+        allowOrigins: ['*'],
+      },
+      deployOptions: {
+        loggingLevel: restapi.MethodLoggingLevel.INFO,
+        dataTraceEnabled: true
+      }
+    })
+    const resUploadCCD = restUploadCCD.root.addResource('uploadccd')
+    resUploadCCD.addMethod('POST', new restapi.LambdaIntegration(lambdaUploadCCDApi.lambdaFunction),{
+      apiKeyRequired: true,
+    })
+    const apiKey = restUploadCCD.addApiKey('Hospital-sample')
+
+    const apiUsagePlan = restUploadCCD.addUsagePlan('Hospital-sample-UsagePlan', {
+      name: 'Hospital-sample-UsagePlan',
+      apiKey: apiKey,
+      throttle: {
+        rateLimit: 100,
+        burstLimit: 200
+      }
+    })
+
+
+
+
 
     //
     // Glue Crawler for FHIR
