@@ -1,3 +1,18 @@
+"""
+File: athena_helper.py
+Project: aws-rush-fhir
+File Created: Monday, 18th January 2021 5:02:19 pm
+Author: Canivel, Danilo (dccanive@amazon.com)
+-----
+Last Modified: Friday, 29th January 2021 9:00:01 am
+Modified By: Canivel, Danilo (dccanive@amazon.com>)
+-----
+(c) 2020 - 2021 Amazon Web Services, Inc. or its affiliates. All Rights Reserved. 
+This AWS Content is provided subject to the terms of the AWS Customer Agreement available at
+http://aws.amazon.com/agreement or other written agreement between Customer and either
+Amazon Web Services, Inc. or Amazon Web Services EMEA SARL or both.
+"""
+
 import os
 import boto3
 import logging

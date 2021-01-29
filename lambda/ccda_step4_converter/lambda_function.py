@@ -8,7 +8,10 @@ Description: Execute the conversion to generate a FHIR Bundle typer Batch
 Last Modified: Tuesday, 12th January 2021 8:48:48 am
 Modified By: Canivel, Danilo (dccanive@amazon.com>)
 -----
-Copyright 2020 - 2020 Amazon Web Services, Amazon
+(c) 2020 - 2021 Amazon Web Services, Inc. or its affiliates. All Rights Reserved. 
+This AWS Content is provided subject to the terms of the AWS Customer Agreement available at
+http://aws.amazon.com/agreement or other written agreement between Customer and either
+Amazon Web Services, Inc. or Amazon Web Services EMEA SARL or both.
 """
 
 # Import the libraries

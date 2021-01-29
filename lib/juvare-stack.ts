@@ -1,3 +1,18 @@
+/*
+ * File: juvare-stack.ts
+ * Project: aws-rush-fhir
+ * File Created: Monday, 18th January 2021 5:02:20 pm
+ * Author: Lakshmikanth Pandre (pandrel@amazon.com)
+ * -----
+ * Last Modified: Friday, 29th January 2021 9:02:57 am
+ * Modified By: Canivel, Danilo (dccanive@amazon.com>)
+ * -----
+ * (c) 2020 - 2021 Amazon Web Services, Inc. or its affiliates. All Rights Reserved.
+ * This AWS Content is provided subject to the terms of the AWS Customer Agreement available at
+ * http://aws.amazon.com/agreement or other written agreement between Customer and either
+ * Amazon Web Services, Inc. or Amazon Web Services EMEA SARL or both.
+ */
+
 import s3 = require("@aws-cdk/aws-s3");
 import s3n = require("@aws-cdk/aws-s3-notifications");
 import s3deploy = require("@aws-cdk/aws-s3-deployment");
