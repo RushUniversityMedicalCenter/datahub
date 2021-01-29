@@ -405,12 +405,14 @@ export class fhirStack extends Stack {
     // API Gateway for dropping files to landingApi bucket
     //
 
+    const lambdaUploadCCDApi = new createLambda(this, envName,roleLambdaProcessCCD,'uploadCCDApi',
+      {
+        BUCKET_LANDING_API: s3LandingApi.bucket.bucketName
+      })
+
+
     // old httpapi - changed to restapi to add apikey. Congito integration has to be moved to next phase
-    // const lambdaUploadCCDApi = new createLambda(this, envName,roleLambdaProcessCCD,'uploadCCDApi',
-    //   {
-    //     BUCKET_LANDING_API: s3LandingApi.bucket.bucketName
-    //   })
-    //
+
     // const apiUploadCCD = new api.HttpApi(this,'apiUploadCCD',
     //   {
     //     apiName: envName+'-UploadCCD',
