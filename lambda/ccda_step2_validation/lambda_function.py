@@ -5,10 +5,13 @@ File Created: Friday, 17th July 2020 7:04:34 pm
 Author: Canivel, Danilo (dccanive@amazon.com)
 Description: Check if content is valid and send to deduplication
 -----
-Last Modified: Tuesday, 19th January 2021 8:47:31 am
+Last Modified: Monday, 11th January 2021 8:47:50 pm
 Modified By: Canivel, Danilo (dccanive@amazon.com>)
 -----
-Copyright 2020 - 2020 Amazon Web Services, Amazon
+(c) 2020 - 2021 Amazon Web Services, Inc. or its affiliates. All Rights Reserved. 
+This AWS Content is provided subject to the terms of the AWS Customer Agreement available at
+http://aws.amazon.com/agreement or other written agreement between Customer and either
+Amazon Web Services, Inc. or Amazon Web Services EMEA SARL or both.
 """
 
 # Import the libraries
@@ -111,23 +114,14 @@ def lambda_handler(event, context):
             event["Object"]["Type"] = "CCD"
             update_dynamodb_log(sqs_message_id, event["Status"], "")
         except ET.ParseError as err:
-            lines = s3_filedata.decode("utf-8").splitlines()
-            if lines[0].startswith("BHS"):
-                event["Object"]["Type"] = "HL7_BATCH"
-                # remove the first and last:
-                lines.pop(0)
-                lines.pop(-1)
-            else:
-                event["Object"]["Type"] = "HL7"
-
-            hl7_type = [x.split("|")[8] for x in lines if x.startswith("MSH")][0]
+            event["Status"] = "VALID"
+            hl7_type = [x.split("|")[8] for x in s3_filedata.decode("utf-8").splitlines() if x.startswith("MSH")][0]
             # hl7_type = s3_filedata.decode().split("|")[8]
 
             if len([x for x in hl7_supported_types if x in hl7_type]) == 1:
-                event["Status"] = "VALID"
+                event["Object"]["Type"] = "HL7"
                 update_dynamodb_log(sqs_message_id, event["Status"], "")
             else:
-                event["Status"] = "NOT_VALID"
                 update_dynamodb_log(sqs_message_id, event["Status"], str(err))
                 raise Exception("Not Supported File type")
 

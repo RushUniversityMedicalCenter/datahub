@@ -129,8 +129,7 @@ def getEncounterRecord(dataRecord, filename):
             if j_hosp:
                 j_dcdispo = getValueFromDict(j_hosp, "dischargeDisposition")
                 if j_dcdispo:
-                    if "display" in j_dcdispo["coding"][0]:
-                        encounter["dcDispo"] = j_dcdispo["coding"][0]["display"]
+                    encounter["dcDispo"] = j_dcdispo["coding"][0]["display"]
             encounter["filename"] = filename
             encounter["orgName"] = orgName
             if composition.get("comp_id"):
@@ -166,9 +165,9 @@ def getConditionRecord(dataRecord, filename):
                     condition = {}
                     condition["person_id"] = person_id
                     condition["encounter_id"] = encounter_id
-                    condition["dxcode"] = dxcode.get("code")
-                    condition["dxdescription"] = dxcode.get("display")
-                    condition["dxsystem"] = dxcode.get("system")
+                    condition["dxcode"] = dxcode["code"]
+                    condition["dxdescription"] = dxcode["display"]
+                    condition["dxsystem"] = dxcode["system"]
                     condition["filename"] = filename
                     condition["orgName"] = orgName
                     if composition.get("comp_id"):

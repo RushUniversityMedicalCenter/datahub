@@ -8,7 +8,10 @@ Description: Execute the conversion to generate a FHIR Bundle typer Batch
 Last Modified: Tuesday, 12th January 2021 8:48:48 am
 Modified By: Canivel, Danilo (dccanive@amazon.com>)
 -----
-Copyright 2020 - 2020 Amazon Web Services, Amazon
+(c) 2020 - 2021 Amazon Web Services, Inc. or its affiliates. All Rights Reserved.
+This AWS Content is provided subject to the terms of the AWS Customer Agreement available at
+http://aws.amazon.com/agreement or other written agreement between Customer and either
+Amazon Web Services, Inc. or Amazon Web Services EMEA SARL or both.
 """
 
 # Import the libraries
@@ -161,12 +164,6 @@ def lambda_handler(event, context):
             LOGGER.info("---- CCDA Convertion Started -----")
             fhir_bundle_content = convert_to_fhir(CCD_FHIR_CONVERTER_ENDPOINT, HEADERS, ccd_content, event)
         else:
-
-            # remove first and last lines
-            if filetype == "HL7_BATCH":
-                ccd_content = ccd_content.decode("utf-8")
-                ccd_content = ccd_content[ccd_content.find("\n") + 1 : ccd_content.rfind("\n")]
-
             LOGGER.info("---- HL7 Convertion Started -----")
             fhir_bundle_content = convert_to_fhir(HL7_FHIR_CONVERTER_URL, HEADERS, ccd_content, event)
 

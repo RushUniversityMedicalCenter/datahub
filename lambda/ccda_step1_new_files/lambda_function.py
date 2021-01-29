@@ -9,7 +9,10 @@ Each object represents 1 file that can contain a single XML file to be later con
 Last Modified: Wednesday, 6th January 2021 11:58:49 am
 Modified By: Canivel, Danilo (dccanive@amazon.com>)
 -----
-Copyright 2020 - 2020 Amazon Web Services, Amazon
+(c) 2020 - 2021 Amazon Web Services, Inc. or its affiliates. All Rights Reserved. 
+This AWS Content is provided subject to the terms of the AWS Customer Agreement available at
+http://aws.amazon.com/agreement or other written agreement between Customer and either
+Amazon Web Services, Inc. or Amazon Web Services EMEA SARL or both.
 """
 # Import the libraries
 import json

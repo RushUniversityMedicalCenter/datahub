@@ -9,7 +9,10 @@ and POST it to Health Lake
 Last Modified: Tuesday, 12th January 2021 9:16:53 am
 Modified By: Canivel, Danilo (dccanive@amazon.com>)
 -----
-Copyright 2020 - 2020 Amazon Web Services, Amazon
+(c) 2020 - 2021 Amazon Web Services, Inc. or its affiliates. All Rights Reserved. 
+This AWS Content is provided subject to the terms of the AWS Customer Agreement available at
+http://aws.amazon.com/agreement or other written agreement between Customer and either
+Amazon Web Services, Inc. or Amazon Web Services EMEA SARL or both.
 """
 
 # Import the libraries
@@ -36,8 +39,8 @@ CCDS_SQSMESSAGE_TABLE_LOG = os.environ["CCDS_SQSMESSAGE_TABLE_LOG"]
 BUCKET_PROCESSED_FHIR_RESOURCES = os.environ["BUCKET_PROCESSED_FHIR_RESOURCES"]
 FOLDER_PROCESSED_FHIR_RESOURCES = os.environ["FOLDER_PROCESSED_FHIR_RESOURCES"]
 HEALTHLAKE_ENDPOINT = os.environ["HEALTHLAKE_ENDPOINT"]
-#HEALTHLAKE_CANONICAL_URI = os.environ["HEALTHLAKE_CANONICAL_URI"]
-HEALTHLAKE_CANONICAL_URI = os.environ["HEALTHLAKE_ENDPOINT"].split('amazonaws.com')[-1]
+# HEALTHLAKE_CANONICAL_URI = os.environ["HEALTHLAKE_CANONICAL_URI"]
+HEALTHLAKE_CANONICAL_URI = os.environ["HEALTHLAKE_ENDPOINT"].split("amazonaws.com")[-1]
 
 # Instantiate the service clients
 S3_CLIENT = boto3.client("s3")

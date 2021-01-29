@@ -8,7 +8,7 @@ import glue = require('@aws-cdk/aws-glue');
 import sns = require('@aws-cdk/aws-sns');
 import lambda = require('@aws-cdk/aws-lambda');
 import {App, CfnOutput, Duration, RemovalPolicy, Stack, StackProps} from "@aws-cdk/core";
-import {createLambdaWithLayer, creates3bucket} from "./helpers";
+import {createLambda, createLambdaWithLayer, creates3bucket} from "./helpers";
 
 export interface juvareStackProps extends StackProps {
   readonly envName: string;
@@ -22,13 +22,13 @@ export class bedcapStack extends Stack {
 
     // IAM role for processCCDA, .. add more tbd
 
-    const roleLambdaProcessJuvare = new iam.Role(this, 'roleLambdaProcessJuvare',{
+    const roleLambdaProcessBedCap = new iam.Role(this, 'roleLambdaProcessBedCap',{
       assumedBy: new iam.ServicePrincipal("lambda.amazonaws.com"),
-      roleName: envName+'LambdaProcessJuvare'
+      roleName: envName+'LambdaProcessBedCap'
     });
-    roleLambdaProcessJuvare.addManagedPolicy(iam.ManagedPolicy.fromAwsManagedPolicyName('service-role/AWSLambdaVPCAccessExecutionRole'))
-    roleLambdaProcessJuvare.addManagedPolicy(iam.ManagedPolicy.fromAwsManagedPolicyName('service-role/AWSLambdaRole'))
-    roleLambdaProcessJuvare.addToPolicy(new iam.PolicyStatement(
+    roleLambdaProcessBedCap.addManagedPolicy(iam.ManagedPolicy.fromAwsManagedPolicyName('service-role/AWSLambdaVPCAccessExecutionRole'))
+    roleLambdaProcessBedCap.addManagedPolicy(iam.ManagedPolicy.fromAwsManagedPolicyName('service-role/AWSLambdaRole'))
+    roleLambdaProcessBedCap.addToPolicy(new iam.PolicyStatement(
       {
         resources: ['*'],
         actions: ['glue:StartCrawler']
@@ -42,35 +42,35 @@ export class bedcapStack extends Stack {
         new iam.ServicePrincipal("lambda.amazonaws.com")
       ),
       // Glue role name must follow the below syntax. AWSGlueServiceRole Prefix is required for Glue to work properly.
-      roleName: "AWSGlueServiceRole-"+envName+'Juvare'
+      roleName: "AWSGlueServiceRole-"+envName+'BedCap'
     })
     roleGlueService.addManagedPolicy(iam.ManagedPolicy.fromAwsManagedPolicyName('service-role/AWSGlueServiceRole'))
 
 
     // KMS
 
-    const kmsJuvareKey = new kms.Key(this, 'kmsJuvareKey',{
+    const kmsBedCapKey = new kms.Key(this, 'kmsBedCapKey',{
       alias: envName+'-bedcap-key',
       enableKeyRotation: true
     })
-    kmsJuvareKey.grantEncryptDecrypt(roleLambdaProcessJuvare)
+    kmsBedCapKey.grantEncryptDecrypt(roleLambdaProcessBedCap)
 
     // S3 Buckets
 
 
-    const s3LandingJuvare = new creates3bucket(this, 'landing-bedcap', kmsJuvareKey)
-    s3LandingJuvare.bucket.grantReadWrite(roleLambdaProcessJuvare)
+    const s3LandingBedCap = new creates3bucket(this, 'landing-bedcap', kmsBedCapKey)
+    s3LandingBedCap.bucket.grantReadWrite(roleLambdaProcessBedCap)
 
-    // Create folder structure in Juvare Landing bucket
-    new s3deploy.BucketDeployment(this, 'cdph_idph',{
-      sources: [s3deploy.Source.asset('./juvare_folder_structure/juvare')],
-      destinationBucket: s3LandingJuvare.bucket,
+    // Create folder structure in BedCap Landing bucket
+    new s3deploy.BucketDeployment(this, 'bedcap_folder_structure',{
+      sources: [s3deploy.Source.asset('./bedcap_folder_structure/')],
+      destinationBucket: s3LandingBedCap.bucket,
       //destinationKeyPrefix: '',
     })
 
-    const s3ProcessedJuvare = new creates3bucket(this, 'processed-bedcap', kmsJuvareKey)
-    s3ProcessedJuvare.bucket.grantReadWrite(roleLambdaProcessJuvare)
-    s3ProcessedJuvare.bucket.grantReadWrite(roleGlueService)
+    const s3ProcessedBedCap = new creates3bucket(this, 'processed-bedcap', kmsBedCapKey)
+    s3ProcessedBedCap.bucket.grantReadWrite(roleLambdaProcessBedCap)
+    s3ProcessedBedCap.bucket.grantReadWrite(roleGlueService)
 
     // Athena Queries bucket. AES256 encrypted to allow users to use the bucket for athena queries
     const s3AthenaQueries = new s3.Bucket(this, 'athena-queries',{
@@ -97,36 +97,36 @@ export class bedcapStack extends Stack {
       tableName: envName+'-bedcap_hash_table_log',
       billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
       encryption: dynamodb.TableEncryption.CUSTOMER_MANAGED,
-      encryptionKey: kmsJuvareKey,
+      encryptionKey: kmsBedCapKey,
       partitionKey: {name: 'md5Digest', type: dynamodb.AttributeType.STRING},
       removalPolicy: RemovalPolicy.DESTROY,
     })
-    bedcap_hash_table_log.grantFullAccess(roleLambdaProcessJuvare)
+    bedcap_hash_table_log.grantFullAccess(roleLambdaProcessBedCap)
 
     const bedcap_execution_log = new dynamodb.Table(this, 'bedcap_execution_log', {
       tableName: envName+'-bedcap_execution_log',
       billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
       encryption: dynamodb.TableEncryption.CUSTOMER_MANAGED,
-      encryptionKey: kmsJuvareKey,
+      encryptionKey: kmsBedCapKey,
       partitionKey: {name: 'lambdaId', type: dynamodb.AttributeType.STRING},
       removalPolicy: RemovalPolicy.DESTROY,
     })
-    bedcap_execution_log.grantFullAccess(roleLambdaProcessJuvare)
+    bedcap_execution_log.grantFullAccess(roleLambdaProcessBedCap)
 
 
     //
     // SNS
     //
 
-    const JuvareProcessingTopic = new sns.Topic(this, 'snsJuvareProcessingTopic', {
-      displayName: envName+'JuvareProcessingTopic'
+    const BedCapProcessingTopic = new sns.Topic(this, 'snsBedCapProcessingTopic', {
+      displayName: envName+'BedCapProcessingTopic'
     })
 
     //
     // Glue
     //
 
-    const glueDbJuvare = new glue.Database(this, envName+'bedcap', {
+    const glueDbBedCap = new glue.Database(this, envName+'bedcap', {
       databaseName: envName+'-bedcap'
     })
 
@@ -135,12 +135,12 @@ export class bedcapStack extends Stack {
     const JuvareDailyCDPHIDPHCrawler = new glue.CfnCrawler(this, 'JuvareDailyCDPHIDPHCrawler',{
       name: envName+'JuvareDailyCDPHIDPHCrawler',
       role: roleGlueService.roleArn,
-      databaseName: glueDbJuvare.databaseName,
+      databaseName: glueDbBedCap.databaseName,
       schedule: {"scheduleExpression": "cron(0 0 * * ? *)"},
       tablePrefix: 'daily_cpdh_idph_',
       targets: {
         s3Targets: [{
-          path: 's3://'+s3ProcessedJuvare.bucket.bucketName+'/juvare/cdph_idph/'
+          path: 's3://'+s3ProcessedBedCap.bucket.bucketName+'/juvare/cdph_idph/'
         }]
       }
     })
@@ -148,12 +148,25 @@ export class bedcapStack extends Stack {
     const JuvareDailyHaveBedCrawler = new glue.CfnCrawler(this, 'JuvareDailyHaveBedCrawler',{
       name: envName+'JuvareDailyHaveBedCrawler',
       role: roleGlueService.roleArn,
-      databaseName: glueDbJuvare.databaseName,
+      databaseName: glueDbBedCap.databaseName,
       tablePrefix: 'daily_have_bed_',
       schedule: {"scheduleExpression": "cron(0 0 * * ? *)"},
       targets: {
         s3Targets: [{
-          path: 's3://'+s3ProcessedJuvare.bucket.bucketName+'/juvare/daily_havbed/'
+          path: 's3://'+s3ProcessedBedCap.bucket.bucketName+'/juvare/daily_havbed/'
+        }]
+      }
+    })
+
+    const HHSBedCapacityCrawler = new glue.CfnCrawler(this, 'HHSBedCapacityCrawler',{
+      name: envName+'HHSBedCapacityCrawler',
+      role: roleGlueService.roleArn,
+      databaseName: glueDbBedCap.databaseName,
+      tablePrefix: 'hhs_',
+      schedule: {"scheduleExpression": "cron(0 0 * * ? *)"},
+      targets: {
+        s3Targets: [{
+          path: 's3://'+s3ProcessedBedCap.bucket.bucketName+'/hhs/'
         }]
       }
     })
@@ -167,48 +180,75 @@ export class bedcapStack extends Stack {
 
     // lambda
 
-    const bedcap_cdph_idph_process = new createLambdaWithLayer(this, envName, roleLambdaProcessJuvare, 'bedcap_cdph_idph_process',layerXlrd,
+    const bedcap_cdph_idph_process = new createLambdaWithLayer(this, envName, roleLambdaProcessBedCap, 'bedcap_cdph_idph_process',layerXlrd,
       {
-        BUCKET_PROCESSED_JUVARE: s3ProcessedJuvare.bucket.bucketName,
+        BUCKET_PROCESSED_JUVARE: s3ProcessedBedCap.bucket.bucketName,
         BUCKET_PROCESSED_JUVARE_FOLDER: 'cdph_idph',
         BUCKET_RAW_JUVARE_FOLDER: 'raw_cdph_idph',
         DYNAMODB_JUVARE_EXECUTION_LOG: bedcap_execution_log.tableName,
         DYNAMODB_JUVARE_HASH_TABLE_LOG: bedcap_hash_table_log.tableName,
         GLUE_CRAWLER_JUVARE_CDPH_IDPH: envName+'JuvareDailyCDPHIDPHCrawler',
-        SNS_TOPIC_ARN: JuvareProcessingTopic.topicArn
+        SNS_TOPIC_ARN: BedCapProcessingTopic.topicArn
       });
 
     // todo add crawler, glue db
 
-    const bedcap_have_bed_process = new createLambdaWithLayer(this, envName, roleLambdaProcessJuvare, 'bedcap_have_bed_process',layerXlrd,
+    const bedcap_have_bed_process = new createLambdaWithLayer(this, envName, roleLambdaProcessBedCap, 'bedcap_have_bed_process',layerXlrd,
       {
-        BUCKET_PROCESSED_JUVARE: s3ProcessedJuvare.bucket.bucketName,
+        BUCKET_PROCESSED_JUVARE: s3ProcessedBedCap.bucket.bucketName,
         BUCKET_PROCESSED_JUVARE_FOLDER: 'daily_havbed',
         BUCKET_RAW_JUVARE_FOLDER: 'raw_daily_havbed',
         DYNAMODB_JUVARE_EXECUTION_LOG: bedcap_execution_log.tableName,
         DYNAMODB_JUVARE_HASH_TABLE_LOG: bedcap_hash_table_log.tableName,
         GLUE_CRAWLER_JUVARE_HAVE_BED: envName+'JuvareDailyHaveBedCrawler',
-        SNS_TOPIC_ARN: JuvareProcessingTopic.topicArn
+        SNS_TOPIC_ARN: BedCapProcessingTopic.topicArn
       });
+
+    const hhs_bed_capacity_process = new createLambda(this, envName,roleLambdaProcessBedCap, 'hhs_bed_capacity_process',
+      {
+        BUCKET_PROCESSED_HHS: s3ProcessedBedCap.bucket.bucketName,
+        DYNAMODB_HHS_EXECUTION_LOG: bedcap_execution_log.tableName,
+        DYNAMODB_HHS_HASH_TABLE_LOG: bedcap_hash_table_log.tableName,
+        GLUE_CRAWLER_HHS: envName+'HHSBedCapacityCrawler',
+        SNS_TOPIC_ARN: BedCapProcessingTopic.topicArn
+      })
+
 
     // S3 Triggers/Notifications
 
-    s3LandingJuvare.bucket.addEventNotification(s3.EventType.OBJECT_CREATED,
+    s3LandingBedCap.bucket.addEventNotification(s3.EventType.OBJECT_CREATED,
       new s3n.LambdaDestination(bedcap_cdph_idph_process.lambdaFunction),
       {
-        prefix: 'cdph_idph/'
+        prefix: 'juvare/cdph_idph/'
       })
 
-    s3LandingJuvare.bucket.addEventNotification(s3.EventType.OBJECT_CREATED,
+    s3LandingBedCap.bucket.addEventNotification(s3.EventType.OBJECT_CREATED,
       new s3n.LambdaDestination(bedcap_have_bed_process.lambdaFunction),
       {
-        prefix: 'daily_havbed/'
+        prefix: 'juvare/daily_havbed/'
+      })
+
+    s3LandingBedCap.bucket.addEventNotification(s3.EventType.OBJECT_CREATED,
+      new s3n.LambdaDestination(hhs_bed_capacity_process.lambdaFunction),
+      {
+        prefix: 'hhs/'
       })
 
     new CfnOutput(this, 'roleGlueServiceExport', {
       value: roleGlueService.roleArn,
-      exportName: envName+'-roleGlueService'
     });
+    new CfnOutput(this, 's3LandingBedCap', {
+      value: s3LandingBedCap.bucket.bucketName,
+    });
+    new CfnOutput(this, 's3ProcessedBedCap', {
+      value: s3ProcessedBedCap.bucket.bucketName,
+    });
+    new CfnOutput(this, 'BedCapProcessingTopic', {
+      value: BedCapProcessingTopic.topicArn,
+    });
+
+
+
 
 
   }
