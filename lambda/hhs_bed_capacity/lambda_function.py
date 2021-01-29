@@ -4,7 +4,7 @@ Project: aws-rush-fhir
 File Created: Thursday, 28th January 2021 8:41:02 am
 Author: Canivel, Danilo (dccanive@amazon.com)
 -----
-Last Modified: Thursday, 28th January 2021 8:41:08 am
+Last Modified: Friday, 29th January 2021 10:25:36 am
 Modified By: Canivel, Danilo (dccanive@amazon.com>)
 -----
 (c) 2020 - 2021 Amazon Web Services, Inc. or its affiliates. All Rights Reserved. 
@@ -53,7 +53,7 @@ def csv_processing(filename, bucket_landing, job_id):
         copy_response = S3_CLIENT.copy_object(
             Bucket=f"{BUCKET_PROCESSED_HHS}",
             CopySource=f"/{bucket_landing}/{filename}",
-            Key=f"{hhs_type}/year={datetime.now().year}/month={datetime.now().month}/day={datetime.now().day}/{f_name}",
+            Key=f"hhs/{hhs_type}/year={datetime.now().year}/month={datetime.now().month}/day={datetime.now().day}/{f_name}",
         )
 
         # read the ccd file
@@ -109,7 +109,7 @@ def lambda_handler(event, context):
     try:
         response = GLUE_CLIENT.start_crawler(Name=GLUE_CRAWLER_HHS)
     except Exception as err:
-        LOGGER.error("---- ERROR RUNING CDPH IDPH CRAWLER ----")
+        LOGGER.error("---- ERROR RUNING HHS CRAWLER ----")
         LOGGER.error(str(err))
 
     end = time.time()

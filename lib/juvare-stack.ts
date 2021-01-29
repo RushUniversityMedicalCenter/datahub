@@ -241,7 +241,7 @@ export class juvareStack extends Stack {
       targets: {
         s3Targets: [
           {
-            path: "s3://" + s3ProcessedHHS.bucket.bucketName,
+            path: "s3://" + s3ProcessedJuvare.bucket.bucketName + "/hhs",
           },
         ],
       },
