@@ -106,14 +106,32 @@ As part of the automation of API Gateway deployment, a sample UsagePlan and APIK
 
 - Login to the respective AWS Account via AWS Console.
 - Goto API Gateway Service page. Select {env}-UploadCCD API. Select UsagePlans
+
+
 ![UsagePlan](images/APIUsagePlan.png)
+
+
 - Click Create UsagePlan and provide Name, Throttling settings and Quotas as shown below. Refer https://docs.aws.amazon.com/apigateway/latest/developerguide/api-gateway-api-usage-plans.html for more details.
+
+
 ![CreateUsagePlan](images/APICreateUsagePlan.png)
+
+
 - Associate the UsagePlan with API Gateway Stage
+
+
 ![AssociateUsagePlan](images/APIAssocateUsagePlan.png)
+
+
 - Create API Key
+
+
 ![CreateAPIKey](images/APICreateAPIKey.png)
+
+
 - View and share APIKey with respective hospital
+
+
 ![ViewAPIKey](images/APIViewAPIKey.png)
 
 
