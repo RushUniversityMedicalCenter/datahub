@@ -37,6 +37,13 @@ Clone this repo
 npm install -g aws-cdk
 npm install -g typescript
 npm install
+
+# Microsoft provided Fhir convertor image used in the solution uses port 80 and is not complaint with HIPAA controls
+# In order to terminate the load balancer with HTTPS and ensure everything is still automated we are creating a self signed cert and importing into ACM via below script
+# if you are deploying manually run the below script before deploying the stacks. required to be run only once
+codebuild/create_import_acm_cert.sh
+
+# cdk setup
 cdk bootstrap
 cdk synth
 # uses default context variables envName="dev", vpcCidr="10.0.0.0/16", healthLakeEndpoint="UNDEFINED"
@@ -87,3 +94,27 @@ You should now be able to login with sftpusername and password stored in secret.
 The sftp endpoint can be obtained from the SFTP server parameters.
 
 ![SFTP Server endpoint](./images/SFTPServer.png)
+
+
+## API Gateway Authorization
+
+Below steps explain the process to add UsagePlans and API keys to be used for Authorization to API Gateway.
+
+As part of the automation of API Gateway deployment, a sample UsagePlan and APIKey are created. The sample APIKey is fully functional to use. However, we recommend to create new UsagePlan and APIKey for each hospital. The APIKey should be added to the RestAPI call headers as ```x-api-key:{api_key}``` name/value pair.
+
+## Process to create UsagePlan and API Key
+
+- Login to the respective AWS Account via AWS Console.
+- Goto API Gateway Service page. Select {env}-UploadCCD API. Select UsagePlans
+![UsagePlan](images/APIUsagePlan.png)
+- Click Create UsagePlan and provide Name, Throttling settings and Quotas as shown below. Refer https://docs.aws.amazon.com/apigateway/latest/developerguide/api-gateway-api-usage-plans.html for more details.
+![CreateUsagePlan](images/APICreateUsagePlan.png)
+- Associate the UsagePlan with API Gateway Stage
+![AssociateUsagePlan](images/APIAssocateUsagePlan.png)
+- Create API Key
+![CreateAPIKey](images/APICreateAPIKey.png)
+- View and share APIKey with respective hospital
+![ViewAPIKey](images/APIViewAPIKey.png)
+
+
+

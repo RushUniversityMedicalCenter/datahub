@@ -1,4 +1,21 @@
-#!/usr/bin/env node
+/**
+ File: aws-rush-fhir.ts
+ Project: aws-rush-fhir
+ File Created: Wednesday, 6th January 2021 2:12:57 pm
+ Author: Pandre, Lakshmikanth (pandrel@amazon.com)
+ -----
+ Last Modified: Friday, 29th January 2021 2:10:06 pm
+ Modified By: Pandre, Lakshmikanth (pandrel@amazon.com)
+ -----
+ © 2020 Amazon Web Services, Inc. or its affiliates. All Rights Reserved.
+
+ This AWS Content is provided subject to the terms of the AWS Customer Agreement
+ available at http://aws.amazon.com/agreement or other written agreement between
+ Customer and either Amazon Web Services, Inc. or Amazon Web Services EMEA SARL or both.
+ **/
+
+
+//#!/usr/bin/env node
 import 'source-map-support/register';
 import {infraStack} from '../lib/infra-stack';
 import {App} from "@aws-cdk/core";
