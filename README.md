@@ -46,10 +46,10 @@ codebuild/create_import_acm_cert.sh
 # cdk setup
 cdk bootstrap
 cdk synth
-# uses default context variables envName="dev", vpcCidr="10.0.0.0/16", healthLakeEndpoint="UNDEFINED"
+# uses default context variables envName="dev", vpcCidr="10.0.x.x/16", healthLakeEndpoint="UNDEFINED"
 cdk deploy --all 
 # with specific context variables example, not a valid healthlake endpoint
-cdk deploy -all --context envName="prd" --context vpcCidr="10.108.0.0/22" --context healthLakeEndpoint="https://healthlake.us-east-1.amazonaws.com/datastore/xxxxxxxxx/r4/"
+cdk deploy -all --context envName="prd" --context vpcCidr="10.x.0.0/22" --context healthLakeEndpoint="https://healthlake.us-east-1.amazonaws.com/datastore/xxxxxxxxx/r4/"
 # Optional to deploy the sftp stack with custom auth
 cd sam
 CDK_BOOTSTRAP_BUCKET=$(aws s3 ls |grep cdktoolkit|head -1| awk '{print $NF}')
